@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股量價分析系統 (Stock Analyzer)</title>
+
+    <!-- 1. 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. 載入 React 和 ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- 3. 載入 Babel (用於解析 JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* 自定義捲軸樣式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-200">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- 0. 內建圖示元件 (取代外部 Lucide 依賴) ---
+        // 這樣做可以確保在本地執行時不會因為 CDN 版本或載入順序問題導致 crash
+
+        const Icon = ({ size = 24, className = "", children, ...props }) => (
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width={size}
+                height={size}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={className}
+                {...props}
+            >
+                {children}
+            </svg>
+        );
+
+        const Search = (props) => <Icon {...props}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></Icon>;
+        const TrendingUp = (props) => <Icon {...props}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></Icon>;
+        const TrendingDown = (props) => <Icon {...props}><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></Icon>;
+        const Activity = (props) => <Icon {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></Icon>;
+        const Info = (props) => <Icon {...props}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></Icon>;
+        const RefreshCw = (props) => <Icon {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></Icon>;
+        const Wifi = (props) => <Icon {...props}><path d="M12 20h.01" /><path d="M2 8.82a15 15 0 0 1 20 0" /><path d="M5 12.859a10 10 0 0 1 14.282 0" /><path d="M8.5 16.429a5 5 0 0 1 7 0" /></Icon>;
+        const WifiOff = (props) => <Icon {...props}><line x1="2" x2="22" y1="2" y2="22" /><path d="M12 20h.01" /><path d="M8.5 16.429a5 5 0 0 1 7 0" /><path d="M5 12.859a10 10 0 0 1 5.17-2.69" /><path d="M19 12.859a10 10 0 0 0-2.007-1.523" /><path d="M2 8.82a15 15 0 0 1 4.175-2.655" /><path d="M10.694 5.005a15 15 0 0 1 11.306 3.815" /></Icon>;
+        const AlertCircle = (props) => <Icon {...props}><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></Icon>;
+        const Layers = (props) => <Icon {...props}><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" /></Icon>;
+        const BarChart2 = (props) => <Icon {...props}><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></Icon>;
+        const DollarSign = (props) => <Icon {...props}><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></Icon>;
+        const Zap = (props) => <Icon {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></Icon>;
+        const Settings = (props) => <Icon {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.52a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></Icon>;
+        const Calendar = (props) => <Icon {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></Icon>;
+
+        // --- 1. 常數與設定 ---
+        const DAYS_TO_FETCH = 150;
+        const CHART_HEIGHT = 400;
+        const VOL_CHART_HEIGHT = 150;
+        const PADDING = { top: 30, right: 60, bottom: 30, left: 10 };
+        const SIGNIFICANT_THRESHOLD = 0.2;
+
+        // --- 2. 輔助函式 ---
+        const getStartDate = (days) => {
+            const date = new Date();
+            date.setDate(date.getDate() - days);
+            return date.toISOString().split('T')[0];
+        };
+
+        // 獲取股票價格與量能資料
+        const fetchStockData = async (stockId) => {
+            const startDate = getStartDate(DAYS_TO_FETCH);
+            const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stockId}&start_date=${startDate}`;
+
+            try {
+                const response = await fetch(url);
+                const json = await response.json();
+
+                if (json.msg === 'success' && json.data.length > 0) {
+                    return json.data.map((item, index, arr) => {
+                        const volume = Math.round(item.Trading_Volume / 1000);
+                        const turnover = item.Trading_money;
+                        const close = item.close;
+
+                        const calculateMA = (idx, days, keyGetter) => {
+                            if (idx < days - 1) return null;
+                            let sum = 0;
+                            for (let i = 0; i < days; i++) {
+                                sum += keyGetter(arr[idx - i]);
+                            }
+                            return sum / days;
+                        };
+
+                        const ma5_price = calculateMA(index, 5, d => d.close);
+                        const ma10_price = calculateMA(index, 10, d => d.close);
+                        const ma20_price = calculateMA(index, 20, d => d.close);
+                        const ma30_price = calculateMA(index, 30, d => d.close);
+
+                        const ma5_vol = calculateMA(index, 5, d => Math.round(d.Trading_Volume / 1000));
+                        const ma10_vol = calculateMA(index, 10, d => Math.round(d.Trading_Volume / 1000));
+                        const ma20_vol = calculateMA(index, 20, d => Math.round(d.Trading_Volume / 1000));
+                        const ma30_vol = calculateMA(index, 30, d => Math.round(d.Trading_Volume / 1000));
+
+                        const ma5_turnover = calculateMA(index, 5, d => d.Trading_money);
+                        const ma10_turnover = calculateMA(index, 10, d => d.Trading_money);
+                        const ma20_turnover = calculateMA(index, 20, d => d.Trading_money);
+                        const ma30_turnover = calculateMA(index, 30, d => d.Trading_money);
+
+                        const prevClose = index > 0 ? arr[index - 1].close : item.open;
+
+                        return {
+                            date: item.date,
+                            open: item.open,
+                            high: item.max,
+                            low: item.min,
+                            close: close,
+                            volume: volume,
+                            turnover: turnover,
+                            prevClose: prevClose,
+                            dayChange: close - prevClose,
+                            maData: {
+                                price: { 5: ma5_price, 10: ma10_price, 20: ma20_price, 30: ma30_price },
+                                vol: { 5: ma5_vol, 10: ma10_vol, 20: ma20_vol, 30: ma30_vol },
+                                turnover: { 5: ma5_turnover, 10: ma10_turnover, 20: ma20_turnover, 30: ma30_turnover }
+                            }
+                        };
+                    });
+                } else {
+                    return [];
+                }
+            } catch (error) {
+                console.error("API Fetch Error (Price):", error);
+                throw new Error("無法連線至數據源");
+            }
+        };
+
+        // 新增：獲取股票基本資訊 (名稱、類別)
+        const fetchStockInfo = async (stockId) => {
+            const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo&data_id=${stockId}`;
+            try {
+                const response = await fetch(url);
+                const json = await response.json();
+                if (json.msg === 'success' && json.data.length > 0) {
+                    return json.data[0]; // 回傳第一筆資料，包含 stock_name, industry_category
+                }
+                return null;
+            } catch (error) {
+                console.error("API Fetch Error (Info):", error);
+                return null; // 基本資訊獲取失敗不應阻擋主程式
+            }
+        };
+
+        const formatNumber = (num) => {
+            if (num === null || num === undefined) return '-';
+            return new Intl.NumberFormat('zh-TW').format(Math.round(num));
+        };
+        const formatMoney = (num) => {
+            if (num === null || num === undefined) return '-';
+            if (num > 100000000) return (num / 100000000).toFixed(2) + '億';
+            if (num > 10000) return (num / 10000).toFixed(2) + '萬';
+            return formatNumber(num);
+        };
+        const formatPct = (val) => {
+            if (val === null || val === undefined || isNaN(val)) return '-';
+            const sign = val > 0 ? '+' : '';
+            return `${sign}${(val * 100).toFixed(2)}%`;
+        };
+
+        // --- 3. React Components ---
+
+        const Tooltip = ({ data, x, y, visible, baselineName }) => {
+            if (!visible || !data) return null;
+
+            const leftPos = Math.min(x + 15, window.innerWidth - 320);
+
+            return (
+                <div
+                    className="absolute bg-slate-800 border border-slate-600 p-3 rounded shadow-xl text-xs z-50 pointer-events-none w-72"
+                    style={{ left: leftPos, top: y }}
+                >
+                    <div className="font-bold text-slate-200 mb-2 border-b border-slate-600 pb-1 flex justify-between">
+                        <span>{data.date}</span>
+                        <span className={data.dayChange >= 0 ? 'text-red-400' : 'text-green-400'}>
+                            {data.dayChange > 0 ? '▲' : ''}{data.dayChange < 0 ? '▼' : ''} {Math.abs(data.dayChange).toFixed(2)}
+                        </span>
+                    </div>
+
+                    <div className="mb-2 text-[10px] text-slate-500 text-center bg-slate-900/50 rounded py-1">
+                        比較基準: {baselineName}
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-1 items-center">
+                            <span className="text-slate-400 text-right">收盤價</span>
+                            <span className="text-slate-200 text-right font-mono">{data.close.toFixed(2)}</span>
+                            <span className={`text-right font-mono ${data.analysisMetrics.priceChangePct >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                {formatPct(data.analysisMetrics.priceChangePct)}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1 items-center">
+                            <span className="text-slate-400 text-right">成交量</span>
+                            <span className="text-slate-200 text-right font-mono">{formatNumber(data.volume)}</span>
+                            <span className={`text-right font-mono ${data.analysisMetrics.volChangePct >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                {formatPct(data.analysisMetrics.volChangePct)}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1 items-center">
+                            <span className="text-slate-400 text-right">成交額</span>
+                            <span className="text-slate-200 text-right font-mono">{formatMoney(data.turnover)}</span>
+                            <span className={`text-right font-mono ${data.analysisMetrics.turnoverChangePct >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                {formatPct(data.analysisMetrics.turnoverChangePct)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-slate-600 text-[10px] space-y-1">
+                        {data.sentimentAnalysis.volume.type === 'bullish' && (
+                            <div className="text-red-300 flex items-center gap-1"><Zap size={10} /> {data.sentimentAnalysis.volume.text}</div>
+                        )}
+                        {data.sentimentAnalysis.volume.type === 'bearish' && (
+                            <div className="text-blue-300 flex items-center gap-1"><Info size={10} /> {data.sentimentAnalysis.volume.text}</div>
+                        )}
+                        {data.sentimentAnalysis.turnover.type === 'bullish' && (
+                            <div className="text-purple-300 flex items-center gap-1"><DollarSign size={10} /> {data.sentimentAnalysis.turnover.text}</div>
+                        )}
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-slate-600 font-semibold text-center">
+                        <span className={`
+                        ${data.signalType === 'bullish' ? 'text-red-500' : ''}
+                        ${data.signalType === 'bearish' ? 'text-green-500' : ''}
+                        ${data.signalType === 'warning-up' ? 'text-orange-400' : ''}
+                        ${data.signalType === 'bottom' ? 'text-blue-400' : ''}
+                        ${data.signalType === 'neutral' ? 'text-slate-400' : ''}
+                        `}>
+                            {data.analysis}
+                        </span>
+                    </div>
+                </div>
+            );
+        };
+
+        // 主要元件
+        function StockAnalyzer() {
+            const [symbol, setSymbol] = useState('2330');
+            const [loading, setLoading] = useState(false);
+            const [rawData, setRawData] = useState([]);
+            const [error, setError] = useState(null);
+            const [hoverData, setHoverData] = useState(null);
+            const [cursorX, setCursorX] = useState(0);
+            const [cursorY, setCursorY] = useState(0);
+            const [dataSourceStatus, setDataSourceStatus] = useState('offline');
+            const [chartMode, setChartMode] = useState('standard');
+            const [baseline, setBaseline] = useState('prev');
+            const [selectedIndex, setSelectedIndex] = useState(null);
+
+            // 新增：股票名稱與類別狀態
+            const [stockName, setStockName] = useState('');
+            const [stockCategory, setStockCategory] = useState('');
+
+            const chartRef = useRef(null);
+
+            const loadData = async () => {
+                if (!symbol) return;
+                setLoading(true);
+                setError(null);
+                setRawData([]);
+                setStockName('');
+                setStockCategory('');
+
+                try {
+                    // 同時請求股價與基本資訊
+                    const [priceData, infoData] = await Promise.all([
+                        fetchStockData(symbol),
+                        fetchStockInfo(symbol)
+                    ]);
+
+                    if (priceData.length === 0) {
+                        setError(`找不到代碼 ${symbol} 的資料，請確認是否為上市股票。`);
+                        setDataSourceStatus('offline');
+                    } else {
+                        setRawData(priceData);
+                        setDataSourceStatus('online');
+                    }
+
+                    // 設定股票資訊
+                    if (infoData) {
+                        setStockName(infoData.stock_name || '');
+                        setStockCategory(infoData.industry_category || '');
+                    }
+
+                } catch (err) {
+                    setError("無法取得數據。若是本地執行，請確認瀏覽器未阻擋跨域請求，或嘗試使用其他瀏覽器。");
+                    setDataSourceStatus('offline');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                loadData();
+            }, []);
+
+            const handleSearch = (e) => {
+                e.preventDefault();
+                loadData();
+            };
+
+            const processedData = useMemo(() => {
+                if (!rawData || rawData.length === 0) return [];
+
+                return rawData.map((day, index, arr) => {
+                    let refPrice, refVol, refTurnover;
+
+                    if (baseline === 'prev') {
+                        const prevDay = index > 0 ? arr[index - 1] : day;
+                        refPrice = prevDay.close;
+                        refVol = prevDay.volume;
+                        refTurnover = prevDay.turnover;
+                    } else {
+                        const days = parseInt(baseline);
+                        refPrice = day.maData.price[days];
+                        refVol = day.maData.vol[days];
+                        refTurnover = day.maData.turnover[days];
+                    }
+
+                    const priceChangePct = refPrice ? (day.close - refPrice) / refPrice : null;
+                    const volChangePct = refVol ? (day.volume - refVol) / refVol : null;
+                    const turnoverChangePct = refTurnover ? (day.turnover - refTurnover) / refTurnover : null;
+
+                    let analysis = "無資料";
+                    let signalType = "neutral";
+
+                    let sentimentAnalysis = {
+                        price: { text: "數據不足", type: "neutral" },
+                        volume: { text: "數據不足", type: "neutral" },
+                        turnover: { text: "數據不足", type: "neutral" }
+                    };
+
+                    if (priceChangePct !== null && volChangePct !== null) {
+                        const priceUp = priceChangePct > 0;
+                        const priceDown = priceChangePct < 0;
+                        const volUp = volChangePct > 0;
+                        const volDown = volChangePct < 0;
+
+                        if (priceUp && volUp) {
+                            analysis = "價漲量增 (強勢)";
+                            signalType = "bullish";
+                        } else if (priceUp && volDown) {
+                            analysis = "價漲量縮 (背離)";
+                            signalType = "warning-up";
+                        } else if (priceDown && volUp) {
+                            analysis = "價跌量增 (恐慌)";
+                            signalType = "bearish";
+                        } else if (priceDown && volDown) {
+                            analysis = "價跌量縮 (觀望)";
+                            signalType = "bottom";
+                        }
+
+                        if (priceChangePct > 0) sentimentAnalysis.price = { text: "高於基準 (強)", type: "bullish" };
+                        else if (priceChangePct < 0) sentimentAnalysis.price = { text: "低於基準 (弱)", type: "bearish" };
+                        else sentimentAnalysis.price = { text: "持平", type: "neutral" };
+
+                        if (volChangePct > SIGNIFICANT_THRESHOLD) sentimentAnalysis.volume = { text: "量能顯著放大 (動能強)", type: "bullish" };
+                        else if (volChangePct > 0) sentimentAnalysis.volume = { text: "量能溫和增加", type: "neutral-up" };
+                        else if (volChangePct < -SIGNIFICANT_THRESHOLD) sentimentAnalysis.volume = { text: "量能顯著萎縮 (冷卻)", type: "bearish" };
+                        else if (volChangePct < 0) sentimentAnalysis.volume = { text: "量能小幅低於基準", type: "neutral-down" };
+
+                        if (turnoverChangePct > SIGNIFICANT_THRESHOLD) sentimentAnalysis.turnover = { text: "大額資金湧入", type: "bullish" };
+                        else if (turnoverChangePct < -SIGNIFICANT_THRESHOLD) sentimentAnalysis.turnover = { text: "資金動能不足", type: "bearish" };
+                        else sentimentAnalysis.turnover = { text: "資金流向正常", type: "neutral" };
+                    }
+
+                    return {
+                        ...day,
+                        analysisMetrics: {
+                            priceChangePct,
+                            volChangePct,
+                            turnoverChangePct
+                        },
+                        analysis,
+                        signalType,
+                        sentimentAnalysis
+                    };
+                });
+            }, [rawData, baseline]);
+
+            useEffect(() => {
+                if (rawData.length > 0) {
+                    setSelectedIndex(rawData.length - 1);
+                }
+            }, [rawData]);
+
+            const ChartDisplay = useMemo(() => {
+                if (processedData.length === 0) return null;
+                const stockData = processedData;
+
+                const dataWidth = stockData.length;
+                const chartW = 800;
+                const totalHeight = CHART_HEIGHT + VOL_CHART_HEIGHT;
+                const candleWidth = (chartW - PADDING.left - PADDING.right) / Math.max(dataWidth, 1);
+                const getX = (i) => PADDING.left + i * candleWidth + candleWidth / 2;
+
+                const prices = stockData.flatMap(d => [d.low, d.high]);
+                const minPrice = Math.min(...prices) * 0.98;
+                const maxPrice = Math.max(...prices) * 1.02;
+                const finalMin = minPrice === maxPrice ? minPrice * 0.9 : minPrice;
+                const finalMax = minPrice === maxPrice ? maxPrice * 1.1 : maxPrice;
+                const volumes = stockData.map(d => d.volume);
+                const maxVol = Math.max(...volumes) * 1.2 || 1000;
+
+                const getY = (price) => PADDING.top + (CHART_HEIGHT - PADDING.top - PADDING.bottom) * (1 - (price - finalMin) / (finalMax - finalMin));
+                const getVolY = (vol) => VOL_CHART_HEIGHT - (vol / maxVol) * (VOL_CHART_HEIGHT - 20);
+
+                const priceGridLines = [0, 0.25, 0.5, 0.75, 1].map(pct => {
+                    const val = finalMin + (finalMax - finalMin) * pct;
+                    return { val, y: getY(val) };
+                });
+
+                const turnovers = stockData.map(d => d.turnover);
+                const maxTurnover = Math.max(...turnovers) || 1;
+                const minTurnover = Math.min(...turnovers) || 0;
+                const minVol = Math.min(...volumes) || 0;
+
+                const getNormY = (val, min, max) => {
+                    const range = max - min || 1;
+                    const normalized = (val - min) / range;
+                    return PADDING.top + (totalHeight - PADDING.top - PADDING.bottom) * (1 - normalized);
+                };
+
+                const generatePath = (dataKey, min, max) => {
+                    return stockData.map((d, i) => {
+                        const x = getX(i);
+                        const y = getNormY(d[dataKey], min, max);
+                        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                    }).join(' ');
+                };
+
+                return (
+                    <svg
+                        viewBox={`0 0 ${chartW} ${totalHeight}`}
+                        className="w-full h-full cursor-crosshair select-none"
+                        onMouseMove={(e) => {
+                            if (!chartRef.current) return;
+                            const rect = chartRef.current.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const svgX = (x / rect.width) * chartW;
+                            const index = Math.floor((svgX - PADDING.left) / candleWidth);
+                            if (index >= 0 && index < stockData.length) {
+                                setHoverData(stockData[index]);
+                                setCursorX(e.clientX - rect.left);
+                                setCursorY(e.clientY - rect.top);
+                            }
+                        }}
+                        onMouseLeave={() => setHoverData(null)}
+                        onClick={() => {
+                            if (hoverData) {
+                                const idx = processedData.findIndex(d => d.date === hoverData.date);
+                                if (idx !== -1) setSelectedIndex(idx);
+                            }
+                        }}
+                        onTouchMove={(e) => {
+                            if (!chartRef.current) return;
+                            const touch = e.touches[0];
+                            const rect = chartRef.current.getBoundingClientRect();
+                            const x = touch.clientX - rect.left;
+                            const svgX = (x / rect.width) * chartW;
+                            const index = Math.floor((svgX - PADDING.left) / candleWidth);
+                            if (index >= 0 && index < stockData.length) {
+                                setHoverData(stockData[index]);
+                                setCursorX(touch.clientX - rect.left);
+                                setCursorY(touch.clientY - rect.top);
+                            }
+                        }}
+                    >
+                        <rect width={chartW} height={totalHeight} fill="#0f172a" />
+
+                        {chartMode === 'standard' ? (
+                            <>
+                                {priceGridLines.map((line, i) => (
+                                    <g key={i}>
+                                        <line x1={PADDING.left} y1={line.y} x2={chartW - PADDING.right} y2={line.y} stroke="#1e293b" strokeDasharray="4 4" />
+                                        <text x={chartW - 55} y={line.y + 4} fill="#64748b" fontSize="11" textAnchor="start">{line.val.toFixed(0)}</text>
+                                    </g>
+                                ))}
+
+                                {stockData.map((d, i) => {
+                                    const x = getX(i);
+                                    const yOpen = getY(d.open);
+                                    const yClose = getY(d.close);
+                                    const yHigh = getY(d.high);
+                                    const yLow = getY(d.low);
+                                    let color = '#94a3b8';
+                                    if (d.close > d.open) color = '#ef4444';
+                                    if (d.close < d.open) color = '#22c55e';
+
+                                    const isSelected = i === selectedIndex;
+                                    const opacity = isSelected ? 1 : 0.8;
+                                    const strokeWidth = isSelected ? 2 : 1;
+
+                                    return (
+                                        <g key={i} opacity={opacity}>
+                                            <line x1={x} y1={yHigh} x2={x} y2={yLow} stroke={color} strokeWidth={strokeWidth} />
+                                            <rect
+                                                x={x - candleWidth * 0.35}
+                                                y={Math.min(yOpen, yClose)}
+                                                width={candleWidth * 0.7}
+                                                height={Math.max(1, Math.abs(yOpen - yClose))}
+                                                fill={color}
+                                            />
+                                            {isSelected && (
+                                                <rect
+                                                    x={x - candleWidth * 0.5}
+                                                    y={PADDING.top}
+                                                    width={candleWidth}
+                                                    height={totalHeight - PADDING.top - PADDING.bottom}
+                                                    fill="white"
+                                                    opacity="0.05"
+                                                    pointerEvents="none"
+                                                />
+                                            )}
+                                        </g>
+                                    );
+                                })}
+
+                                <g transform={`translate(0, ${CHART_HEIGHT})`}>
+                                    <line x1={PADDING.left} y1={0} x2={chartW - PADDING.right} y2={0} stroke="#334155" />
+                                    <text x={10} y={20} fill="#94a3b8" fontSize="12">成交量(張)</text>
+                                    {stockData.map((d, i) => {
+                                        const x = getX(i);
+                                        const h = VOL_CHART_HEIGHT - getVolY(d.volume);
+                                        const y = getVolY(d.volume);
+                                        const isUp = d.dayChange > 0;
+                                        const isDown = d.dayChange < 0;
+                                        const color = isUp ? '#ef4444' : (isDown ? '#22c55e' : '#94a3b8');
+                                        const isSelected = i === selectedIndex;
+
+                                        return (
+                                            <rect key={i} x={x - candleWidth * 0.35} y={y} width={candleWidth * 0.7} height={h} fill={color} opacity={isSelected ? 1 : 0.8} />
+                                        );
+                                    })}
+                                </g>
+                            </>
+                        ) : (
+                            <>
+                                {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+                                    const y = PADDING.top + (totalHeight - PADDING.top - PADDING.bottom) * pct;
+                                    return <line key={pct} x1={PADDING.left} y1={y} x2={chartW - PADDING.right} y2={y} stroke="#1e293b" strokeDasharray="4 4" />
+                                })}
+
+                                <g transform={`translate(${PADDING.left + 10}, ${PADDING.top})`}>
+                                    <text x="0" y="0" fill="#facc15" fontSize="12" fontWeight="bold">— 收盤價</text>
+                                    <text x="60" y="0" fill="#3b82f6" fontSize="12" fontWeight="bold">— 成交量</text>
+                                    <text x="120" y="0" fill="#c084fc" fontSize="12" fontWeight="bold">— 成交額</text>
+                                    <text x="0" y="20" fill="#64748b" fontSize="10">*數值已標準化</text>
+                                </g>
+
+                                <path d={generatePath('close', finalMin, finalMax)} stroke="#facc15" strokeWidth="2" fill="none" opacity="0.9" />
+                                <path d={generatePath('volume', minVol, maxVol)} stroke="#3b82f6" strokeWidth="2" fill="none" opacity="0.8" />
+                                <path d={generatePath('turnover', minTurnover, maxTurnover)} stroke="#c084fc" strokeWidth="2" fill="none" strokeDasharray="5 2" opacity="0.8" />
+
+                                {selectedIndex !== null && stockData[selectedIndex] && (
+                                    <line
+                                        x1={getX(selectedIndex)}
+                                        y1={PADDING.top}
+                                        x2={getX(selectedIndex)}
+                                        y2={totalHeight - PADDING.bottom}
+                                        stroke="white"
+                                        strokeWidth="1"
+                                        strokeDasharray="2 2"
+                                        opacity="0.5"
+                                    />
+                                )}
+                            </>
+                        )}
+
+                        {hoverData && (
+                            <>
+                                <line
+                                    x1={getX(stockData.indexOf(hoverData))}
+                                    y1={0}
+                                    x2={getX(stockData.indexOf(hoverData))}
+                                    y2={totalHeight}
+                                    stroke="#94a3b8"
+                                    strokeDasharray="4 4"
+                                    strokeWidth="1"
+                                />
+                                {chartMode === 'standard' && (
+                                    <line
+                                        x1={PADDING.left}
+                                        y1={getY(hoverData.close)}
+                                        x2={chartW - PADDING.right}
+                                        y2={getY(hoverData.close)}
+                                        stroke="#94a3b8"
+                                        strokeDasharray="4 4"
+                                        strokeWidth="0.5"
+                                    />
+                                )}
+                            </>
+                        )}
+                    </svg>
+                );
+            }, [processedData, hoverData, chartMode, selectedIndex]);
+
+            const displayData = selectedIndex !== null && processedData[selectedIndex]
+                ? processedData[selectedIndex]
+                : (processedData.length > 0 ? processedData[processedData.length - 1] : null);
+
+            const baselineLabels = {
+                'prev': '前一日',
+                '5': '5日均線 (MA5)',
+                '10': '10日均線 (MA10)',
+                '20': '20日均線 (MA20)',
+                '30': '30日均線 (MA30)',
+            };
+
+            const dateOptions = processedData.slice(Math.max(0, processedData.length - 30)).reverse();
+
+            return (
+                <div className="min-h-screen bg-slate-950 text-slate-200 font-sans p-4 md:p-8">
+
+                    <div className="max-w-6xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
+                                <Activity className="text-blue-500" />
+                                台股量價分析系統
+                            </h1>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`flex items-center gap-1 text-xs ${dataSourceStatus === 'online' ? 'text-green-400' : 'text-slate-500'}`}>
+                                    {dataSourceStatus === 'online' ? <Wifi size={12} /> : <WifiOff size={12} />}
+                                    {dataSourceStatus === 'online' ? '已連線 FinMind' : '離線'}
+                                </span>
+                                <span className="text-slate-500 text-xs">| 支援歷史回測 (點擊圖表或選擇日期)</span>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSearch} className="flex gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-64">
+                                <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-500" />
+                                <input
+                                    type="text"
+                                    value={symbol}
+                                    onChange={(e) => setSymbol(e.target.value)}
+                                    placeholder="輸入代碼 (例如: 2330)"
+                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-2 rounded focus:outline-none focus:border-blue-500"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors disabled:opacity-50"
+                                disabled={loading}
+                            >
+                                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                查詢
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                        <div className="lg:col-span-2 flex flex-col gap-6">
+
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl relative min-h-[400px]">
+                                <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-lg font-semibold text-white mr-4 flex items-baseline gap-2">
+                                            {symbol}
+                                            {stockName && <span className="text-xl font-bold text-yellow-400">{stockName}</span>}
+                                            {stockCategory && <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">{stockCategory}</span>}
+                                        </h2>
+                                        <div className="flex bg-slate-800 rounded-lg p-1">
+                                            <button
+                                                onClick={() => setChartMode('standard')}
+                                                className={`px-3 py-1 rounded text-xs flex items-center gap-1 ${chartMode === 'standard' ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                            >
+                                                <BarChart2 size={14} /> K線與量能
+                                            </button>
+                                            <button
+                                                onClick={() => setChartMode('trend')}
+                                                className={`px-3 py-1 rounded text-xs flex items-center gap-1 ${chartMode === 'trend' ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                            >
+                                                <Layers size={14} /> 三線趨勢比較
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {chartMode === 'standard' && (
+                                        <div className="flex items-center gap-4 text-xs text-slate-400">
+                                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> 漲</div>
+                                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded-sm"></div> 跌</div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="relative w-full aspect-[4/3] md:aspect-[16/9] lg:aspect-auto lg:h-[550px]" ref={chartRef}>
+                                    {loading && (
+                                        <div className="absolute inset-0 z-10 bg-slate-900/80 flex items-center justify-center backdrop-blur-sm">
+                                            <div className="flex flex-col items-center">
+                                                <RefreshCw className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                                                <span className="text-blue-400">正在讀取真實數據...</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!loading && error && (
+                                        <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                            <div className="bg-slate-800 border border-red-900/50 text-red-200 px-6 py-4 rounded-lg flex items-center gap-3">
+                                                <AlertCircle className="text-red-500" />
+                                                {error}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!loading && !error && processedData.length > 0 && (
+                                        <>
+                                            {ChartDisplay}
+                                            <Tooltip
+                                                data={hoverData}
+                                                x={cursorX}
+                                                y={cursorY}
+                                                visible={!!hoverData}
+                                                baselineName={baselineLabels[baseline]}
+                                            />
+                                        </>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-2 text-right">Tip: 點擊圖表上的 K 棒可鎖定該日進行詳細分析</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-6">
+
+                            {displayData ? (
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                                    <h3 className="text-slate-400 text-sm uppercase tracking-wider mb-4 flex justify-between items-center border-b border-slate-800 pb-2">
+                                        <span className="flex items-center gap-2"><Settings size={14} /> 深度解析設定</span>
+                                    </h3>
+
+                                    <div className="mb-4">
+                                        <label className="text-xs text-slate-500 mb-1 block flex items-center gap-1">
+                                            <Calendar size={12} /> 分析日期 (近30日)
+                                        </label>
+                                        <select
+                                            className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                                            value={displayData.date}
+                                            onChange={(e) => {
+                                                const idx = processedData.findIndex(d => d.date === e.target.value);
+                                                if (idx !== -1) setSelectedIndex(idx);
+                                            }}
+                                        >
+                                            {dateOptions.map((d) => (
+                                                <option key={d.date} value={d.date}>
+                                                    {d.date} {d.dayChange > 0 ? '▲' : (d.dayChange < 0 ? '▼' : '-')} {Math.abs(d.dayChange).toFixed(2)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <span className="text-xs text-slate-500 mb-2 block flex items-center gap-1">
+                                            <Layers size={12} /> 比較基準 (乖離率):
+                                        </span>
+                                        <div className="grid grid-cols-5 gap-1">
+                                            {Object.keys(baselineLabels).map((key) => (
+                                                <button
+                                                    key={key}
+                                                    onClick={() => setBaseline(key)}
+                                                    className={`px-1 py-1 text-[10px] md:text-xs rounded border transition-colors
+                                            ${baseline === key
+                                                            ? 'bg-blue-600 text-white border-blue-500'
+                                                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
+                                                        }
+                                        `}
+                                                >
+                                                    {key === 'prev' ? '前日' : `MA${key}`}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6 relative mt-6">
+                                        {displayData.analysisMetrics.priceChangePct === null && (
+                                            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[1px] flex items-center justify-center z-10 rounded text-center p-4">
+                                                <span className="text-orange-400 text-sm">
+                                                    <AlertCircle className="inline mb-1" size={16} /><br />
+                                                    {displayData.date} 資料不足以計算 {baselineLabels[baseline]}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        <div className="group">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-slate-500 text-xs uppercase flex items-center gap-1">
+                                                    <TrendingUp size={12} /> 收盤價 vs {baselineLabels[baseline]}
+                                                </span>
+                                                <span className={`text-sm font-mono ${displayData.analysisMetrics.priceChangePct >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                                    {formatPct(displayData.analysisMetrics.priceChangePct)}
+                                                </span>
+                                            </div>
+                                            <div className="p-3 bg-slate-800 rounded border-l-2 border-slate-600 text-sm">
+                                                <div className={`font-medium ${displayData.sentimentAnalysis.price.type === 'bullish' ? 'text-red-300' : (displayData.sentimentAnalysis.price.type === 'bearish' ? 'text-green-300' : 'text-slate-300')}`}>
+                                                    {displayData.sentimentAnalysis.price.text}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="group">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-slate-500 text-xs uppercase flex items-center gap-1">
+                                                    <Activity size={12} /> 成交量 vs {baselineLabels[baseline]}
+                                                </span>
+                                                <span className={`text-sm font-mono ${displayData.analysisMetrics.volChangePct >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                                    {formatPct(displayData.analysisMetrics.volChangePct)}
+                                                </span>
+                                            </div>
+                                            <div className={`p-3 bg-slate-800 rounded border-l-2 text-sm
+                                    ${displayData.sentimentAnalysis.volume.type.includes('bullish') ? 'border-red-500' : ''}
+                                    ${displayData.sentimentAnalysis.volume.type.includes('bearish') ? 'border-green-500' : ''}
+                                    ${displayData.sentimentAnalysis.volume.type.includes('neutral') ? 'border-slate-500' : ''}
+                                `}>
+                                                <div className="text-slate-200">
+                                                    {displayData.sentimentAnalysis.volume.text}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="group">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-slate-500 text-xs uppercase flex items-center gap-1">
+                                                    <DollarSign size={12} /> 成交額 vs {baselineLabels[baseline]}
+                                                </span>
+                                                <span className={`text-sm font-mono ${displayData.analysisMetrics.turnoverChangePct >= 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                                    {formatPct(displayData.analysisMetrics.turnoverChangePct)}
+                                                </span>
+                                            </div>
+                                            <div className="p-3 bg-slate-800 rounded border-l-2 border-purple-500 text-sm">
+                                                <div className={`font-medium ${displayData.sentimentAnalysis.turnover.type === 'bullish' ? 'text-purple-300' : 'text-slate-300'}`}>
+                                                    {displayData.sentimentAnalysis.turnover.text}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 border-t border-slate-800 mt-4">
+                                            <span className="text-xs text-blue-400 font-semibold mb-1 block">量價綜合判讀 (基於選擇標準)</span>
+                                            <div className={`text-lg font-bold
+                                ${displayData.signalType === 'bullish' ? 'text-red-400' : ''}
+                                ${displayData.signalType === 'bearish' ? 'text-green-400' : ''}
+                                ${displayData.signalType === 'warning-up' ? 'text-orange-400' : ''}
+                                ${displayData.signalType === 'bottom' ? 'text-blue-300' : ''}
+                                ${displayData.signalType === 'neutral' ? 'text-slate-300' : ''}
+                                `}>
+                                                {displayData.analysis}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-64 flex items-center justify-center text-slate-500">
+                                    等待數據查詢...
+                                </div>
+                            )}
+
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex-1">
+                                <h3 className="text-slate-400 text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <Info size={16} />
+                                    市場情緒轉折對照表 (目前: {baselineLabels[baseline]})
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="text-slate-500 bg-slate-800/50 uppercase">
+                                            <tr>
+                                                <th className="px-2 py-2">指標</th>
+                                                <th className="px-2 py-2">乖離/變化</th>
+                                                <th className="px-2 py-2">市場意涵</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800">
+                                            <tr>
+                                                <td className="px-2 py-2 text-slate-400" rowSpan="2">價格</td>
+                                                <td className="px-2 py-2 text-red-400">&gt; 0%</td>
+                                                <td className="px-2 py-2 text-slate-300">強於基準，買盤優勢</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-2 py-2 text-green-400">&lt; 0%</td>
+                                                <td className="px-2 py-2 text-slate-300">弱於基準，賣壓沈重</td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="px-2 py-2 text-slate-400" rowSpan="2">成交量</td>
+                                                <td className="px-2 py-2 text-red-400">&gt; 20%</td>
+                                                <td className="px-2 py-2 text-slate-300">量能爆發，動能強勁</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-2 py-2 text-green-400">&lt; -20%</td>
+                                                <td className="px-2 py-2 text-slate-300">量能急凍，觀望整理</td>
+                                            </tr>
+
+                                            <tr>
+                                                <td className="px-2 py-2 text-slate-400">成交額</td>
+                                                <td className="px-2 py-2 text-purple-400">&gt; 20%</td>
+                                                <td className="px-2 py-2 text-slate-300">大戶/法人資金進駐</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<StockAnalyzer />);
+    </script>
+</body>
+
+</html>

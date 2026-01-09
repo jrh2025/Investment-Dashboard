@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 綜合技術評級：演算法與指標邏輯詳解</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for LaTeX rendering -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #334155;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            color: #1e293b;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            color: #1e293b;
+            margin-top: 2.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        h2::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 24px;
+            background-color: #3b82f6;
+            margin-right: 12px;
+            border-radius: 4px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-ma {
+            border-left-color: #3b82f6;
+        }
+
+        .card-rsi {
+            border-left-color: #ec4899;
+        }
+
+        .card-bb {
+            border-left-color: #f59e0b;
+        }
+
+        .card-kd {
+            border-left-color: #06b6d4;
+        }
+
+        .card-macd {
+            border-left-color: #8b5cf6;
+        }
+
+        .formula-box {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .indicator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .tag-trend {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .tag-reversal {
+            background-color: #fce7f3;
+            color: #9d174d;
+        }
+
+        .tag-volatility {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .tag-timing {
+            background-color: #cffafe;
+            color: #155e75;
+        }
+
+        .tag-momentum {
+            background-color: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .logic-section {
+            margin-bottom: 1rem;
+        }
+
+        .logic-title {
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        li::before {
+            content: "•";
+            color: #94a3b8;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header class="text-center mb-12">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-4 border-none">AI 綜合技術評級：演算法與指標邏輯詳解</h1>
+            <p class="text-lg text-slate-600 font-light">Algorithm Whitepaper</p>
+            <p class="mt-4 text-slate-500 max-w-2xl mx-auto text-sm leading-relaxed">
+                本文件詳細說明「AI 智能投資儀表板」中，綜合評級分數（AI Score）的計算邏輯、權重分配及各項技術指標的判斷標準。這是一套將傳統技術分析邏輯「量化」後的透明系統。
+            </p>
+        </header>
+
+        <section>
+            <h2>1. 核心算式 (The Formula)</h2>
+            <p class="mb-4 text-slate-600">
+                AI 評分系統採用 <strong>「加權評分模型 (Weighted Scoring Model)」</strong>。系統會先計算每個指標的原始訊號（Raw
+                Signal），再根據使用者設定的權重進行正規化，最後乘以擴張係數。
+            </p>
+
+            <div class="formula-box text-center text-lg">
+                $$Final Score = \sum (Signal_i \times \frac{Weight_i}{TotalWeight} \times 3)$$
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-600">
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <strong class="text-slate-800 block mb-1">Signal_i</strong>
+                    第 \(i\) 個指標的原始訊號 (範圍通常為 -1 到 +1.5)。
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <strong class="text-slate-800 block mb-1">Weight_i</strong>
+                    使用者設定的該指標權重 (預設如 30, 20, 20...)。
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <strong class="text-slate-800 block mb-1">TotalWeight</strong>
+                    所有權重之總和 (通常建議為 100)。
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <strong class="text-slate-800 block mb-1">擴張係數 (3)</strong>
+                    Scale Factor，將分數擴展至約 -3.0 到 +3.0 的區間，以便於人類閱讀與分級。
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>2. 五大指標判斷邏輯 (Indicator Logic)</h2>
+            <p class="mb-6 text-slate-600">系統針對每一個 K 線數據點，依序執行以下五種邏輯判斷：</p>
+
+            <!-- MA -->
+            <div class="card card-ma">
+                <div class="indicator-header">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-blue-500">A.</span> MA 移動平均線
+                    </h3>
+                    <span class="tag tag-trend">趨勢因子</span>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="logic-section">
+                        <div class="logic-title">邏輯 (Logic)</div>
+                        <p class="text-sm text-slate-600">判斷價格相對於 20 週期均線（日線圖為月線、週線圖為 20 週線）的位置。</p>
+                    </div>
+                    <div class="logic-section col-span-2">
+                        <div class="logic-title">判斷式 (Rules)</div>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li><span class="font-bold text-green-600">📈 多頭 (+1.0)</span>：<code>收盤價 > MA20</code></li>
+                            <li><span class="font-bold text-red-500">📉 空頭 (-1.0)</span>：<code>收盤價 <= MA20</code></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-2 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <strong>意義：</strong>最基礎的趨勢過濾器，決定主要得分方向。
+                </div>
+            </div>
+
+            <!-- RSI -->
+            <div class="card card-rsi">
+                <div class="indicator-header">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-pink-500">B.</span> RSI 相對強弱指標
+                    </h3>
+                    <span class="tag tag-reversal">反轉因子</span>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="logic-section">
+                        <div class="logic-title">邏輯 (Logic)</div>
+                        <p class="text-sm text-slate-600">尋找市場過熱或過冷的極端值。</p>
+                    </div>
+                    <div class="logic-section col-span-2">
+                        <div class="logic-title">判斷式 (Rules)</div>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li><span class="font-bold text-blue-500">💎 超賣機會 (+1.0)</span>：<code>RSI < 30</code>
+                                (視為跌深反彈機會)</li>
+                            <li><span class="font-bold text-orange-500">⚠️ 過熱警戒 (-1.0)</span>：<code>RSI > 70</code>
+                                (視為回檔風險)</li>
+                            <li><span class="font-bold text-slate-400">⚖️ 中性 (0.0)</span>：<code>30 <= RSI <= 70</code>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-2 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <strong>意義：</strong>逆勢指標，用於在趨勢中尋找轉折點，或對過度追價發出警告。
+                </div>
+            </div>
+
+            <!-- BB -->
+            <div class="card card-bb">
+                <div class="indicator-header">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-yellow-500">C.</span> 布林通道 Bollinger Bands
+                    </h3>
+                    <span class="tag tag-volatility">波動因子</span>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="logic-section">
+                        <div class="logic-title">邏輯 (Logic)</div>
+                        <p class="text-sm text-slate-600">觀察價格是否突破統計學上的信賴區間。</p>
+                    </div>
+                    <div class="logic-section col-span-2">
+                        <div class="logic-title">判斷式 (Rules)</div>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li><span class="font-bold text-green-600">🚀 強勢噴出 (+1.0)</span>：<code>收盤價 > 上軌</code>
+                                (視為動能強勁)</li>
+                            <li><span class="font-bold text-blue-500">🛡️ 支撐反彈 (+0.5)</span>：<code>收盤價 < 下軌</code>
+                                (視為有支撐，但需防接刀，故分數較低)</li>
+                            <li><span class="font-bold text-slate-400">⚖️ 中性 (0.0)</span>：價格在通道內。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-2 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <strong>意義：</strong>捕捉波動率放大的突破行情，或極端值的回歸。
+                </div>
+            </div>
+
+            <!-- KD -->
+            <div class="card card-kd">
+                <div class="indicator-header">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-cyan-500">D.</span> KD 隨機指標
+                    </h3>
+                    <span class="tag tag-timing">時機因子</span>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="logic-section">
+                        <div class="logic-title">邏輯 (Logic)</div>
+                        <p class="text-sm text-slate-600">尋找低檔黃金交叉，作為精確的進場訊號。</p>
+                    </div>
+                    <div class="logic-section col-span-2">
+                        <div class="logic-title">判斷式 (Rules)</div>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li><span class="font-bold text-green-600">✨ 強力買訊 (+1.5)</span>：<code>K值 > D值</code> 且
+                                <code>前一日K值 <= 前一日D值</code> 且 <code>K值 < 30</code> (低檔金叉)</li>
+                            <li><span class="font-bold text-slate-400">⚖️ 中性 (0.0)</span>：其他情況。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-2 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <strong>意義：</strong>KD 對價格轉折非常敏感，僅在低檔金叉時給予極高加分，作為「扣板機」的依據。
+                </div>
+            </div>
+
+            <!-- MACD -->
+            <div class="card card-macd">
+                <div class="indicator-header">
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-violet-500">E.</span> MACD 動能指標
+                    </h3>
+                    <span class="tag tag-momentum">動能因子</span>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="logic-section">
+                        <div class="logic-title">邏輯 (Logic)</div>
+                        <p class="text-sm text-slate-600">觀察柱狀體 (Histogram) 的增長方向，判斷多空動能的加速度。</p>
+                    </div>
+                    <div class="logic-section col-span-2">
+                        <div class="logic-title">判斷式 (Rules)</div>
+                        <ul class="text-sm text-slate-700 space-y-2">
+                            <li><span class="font-bold text-green-600">📈 動能增強 (+1.0)</span>：<code>柱狀體 > 0</code> 且
+                                <code>柱狀體 > 前一日柱狀體</code></li>
+                            <li><span class="font-bold text-red-500">📉 動能轉弱 (-1.0)</span>：<code>柱狀體 < 0</code> 且
+                                <code>柱狀體 < 前一日柱狀體</code> (負得更多)</li>
+                            <li><span class="font-bold text-slate-400">⚖️ 中性 (0.0)</span>：其他情況 (如柱狀體雖為紅但縮短中)。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-2 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                    <strong>意義：</strong>確認趨勢是否具有延續性。
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-slate-50 p-8 rounded-xl border border-slate-200">
+            <h2>3. 分數解讀範例 (Calculation Example)</h2>
+            <p class="mb-6 text-slate-600">假設當前市場狀況如下（各指標權重皆設為預設值）：</p>
+
+            <div class="space-y-4 font-mono text-sm">
+                <div
+                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-2">
+                    <span class="font-bold text-blue-600">MA: 股價站上月線 (+1)</span>
+                    <span class="text-slate-500">貢獻度 \( 1 \times 0.3 \times 3 = \mathbf{+0.9} \)</span>
+                </div>
+                <div
+                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-2">
+                    <span class="font-bold text-slate-500">MACD: 紅柱縮短 (0)</span>
+                    <span class="text-slate-500">貢獻度 \( 0 \)</span>
+                </div>
+                <div
+                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-2">
+                    <span class="font-bold text-slate-500">RSI: 數值 65 (0)</span>
+                    <span class="text-slate-500">貢獻度 \( 0 \)</span>
+                </div>
+                <div
+                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-2">
+                    <span class="font-bold text-slate-500">BB: 未觸及軌道 (0)</span>
+                    <span class="text-slate-500">貢獻度 \( 0 \)</span>
+                </div>
+                <div
+                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-2">
+                    <span class="font-bold text-green-600">KD: 低檔金叉 (+1.5)</span>
+                    <span class="text-slate-500">貢獻度 \( 1.5 \times 0.15 \times 3 = \mathbf{+0.675} \)</span>
+                </div>
+            </div>
+
+            <div class="mt-8 bg-slate-900 text-white p-6 rounded-lg text-center">
+                <div class="text-sm uppercase tracking-widest text-slate-400 mb-2">Final Score</div>
+                <div class="text-4xl font-extrabold mb-2 font-mono">+1.575</div>
+                <div class="text-green-400 font-bold text-lg">📈 多頭主導 (建議順勢建立部位)</div>
+            </div>
+        </section>
+
+        <footer class="text-center mt-16 text-slate-400 text-sm">
+            &copy; 2026 AI Stock Analyzer Pro. 演算法白皮書 v2.1
+        </footer>
+    </div>
+
+</body>
+
+</html>

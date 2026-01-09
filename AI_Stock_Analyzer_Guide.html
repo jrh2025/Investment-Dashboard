@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能投資儀表板 | 全方位功能指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151e2e', 900: '#0f172a' },
+                        blue: { 450: '#3b82f6' }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            scroll-behavior: smooth;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: #3b82f6;
+            box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.2);
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1.2rem;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .matrix-cell {
+            @apply border border-slate-700 p-4 text-center text-sm;
+        }
+
+        .matrix-header {
+            @apply bg-slate-800 font-bold text-slate-300;
+        }
+
+        /* Accordion Style for FAQ */
+        details>summary {
+            list-style: none;
+            cursor: pointer;
+        }
+
+        details>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details[open] summary~* {
+            animation: sweep .5s ease-in-out;
+        }
+
+        @keyframes sweep {
+            0% {
+                opacity: 0;
+                transform: translateY(-10px)
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* Indicator Card specific styles */
+        .indicator-tag {
+            @apply text-[10px] px-2 py-0.5 rounded border font-mono tracking-wider;
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 backdrop-blur-lg border-b border-slate-700/50 bg-slate-900/80">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">⚡</span>
+                <span class="font-bold text-lg tracking-wide text-white">AI Stock Analyzer <span
+                        class="text-blue-400 font-normal">Pro</span></span>
+            </div>
+            <div class="hidden md:flex gap-6 text-sm text-slate-300 font-medium">
+                <a href="#overview" class="hover:text-white transition-colors">系統架構</a>
+                <a href="#features" class="hover:text-white transition-colors">核心模組</a>
+                <a href="#indicators" class="hover:text-white transition-colors text-blue-400">指標詳解</a>
+                <a href="#matrix" class="hover:text-white transition-colors">訊號解讀</a>
+                <a href="#faq" class="hover:text-white transition-colors">常見問題</a>
+            </div>
+            <a href="https://gemini.google.com/share/bb12c35fe698" target="_blank"
+                class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg hover:shadow-blue-500/30">
+                🚀 立即試用
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-24 pb-32 overflow-hidden bg-slate-900">
+        <!-- Background Elements -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+            <div class="absolute top-20 left-10 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-20 right-10 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px]">
+            </div>
+        </div>
+
+        <div class="max-w-5xl mx-auto px-6 text-center relative z-10">
+            <div
+                class="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-blue-300 text-xs font-mono tracking-wide hover:border-blue-500/50 transition-colors cursor-default">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                System Status: Online v2.1
+            </div>
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight text-white">
+                量化交易的 <br class="hidden md:block" />
+                <span class="gradient-text">終極決策輔助中樞</span>
+            </h1>
+            <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-3xl mx-auto leading-relaxed">
+                這不僅僅是一個看盤工具，而是一個整合了「特徵工程」與「動態權重回測」的 AI 專家系統。
+                <br class="hidden md:block">將複雜的 K 線、均線、動能與波動率，即時轉化為可執行的交易訊號。
+            </p>
+            <div class="flex flex-col sm:flex-row gap-5 justify-center">
+                <a href="https://gemini.google.com/share/bb12c35fe698" target="_blank"
+                    class="btn-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 shadow-blue-900/50 shadow-xl">
+                    <span>⚡ 啟動即時試用 (免安裝)</span>
+                </a>
+                <a href="#indicators"
+                    class="px-8 py-4 rounded-xl font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all border border-slate-700 hover:border-slate-500">
+                    學習技術指標
+                </a>
+            </div>
+            <div class="mt-8 flex justify-center gap-8 text-xs text-slate-500 font-mono">
+                <span class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg> FinMind 台股數據</span>
+                <span class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg> Binance 加密貨幣</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Quant? (Comparison) -->
+    <section id="overview" class="py-24 bg-slate-850 border-y border-slate-800">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white mb-4">為什麼需要量化輔助？</h2>
+                <p class="text-slate-400">告別憑感覺交易，讓數據說話</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                <!-- Old Way -->
+                <div class="bg-red-900/10 border border-red-900/30 p-8 rounded-2xl">
+                    <h3 class="text-red-400 font-bold text-xl mb-6 flex items-center gap-2">
+                        <span>❌</span> 傳統主觀交易
+                    </h3>
+                    <ul class="space-y-4 text-slate-400">
+                        <li class="flex gap-3">
+                            <span class="text-red-500 mt-1">▪</span>
+                            <span><strong>資訊過載：</strong> 同時看 MA、MACD、RSI，訊號打架不知道聽誰的。</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-red-500 mt-1">▪</span>
+                            <span><strong>情緒干擾：</strong> 看到大漲就想追，看到大跌就恐慌殺出。</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-red-500 mt-1">▪</span>
+                            <span><strong>週期錯亂：</strong> 拿日線的買點去操作長線，導致抱不住獲利。</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- AI Way -->
+                <div class="bg-blue-900/10 border border-blue-900/30 p-8 rounded-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
+                    <h3 class="text-blue-400 font-bold text-xl mb-6 flex items-center gap-2">
+                        <span>✅</span> AI 量化分析系統
+                    </h3>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex gap-3">
+                            <span class="text-blue-500 mt-1">▪</span>
+                            <span><strong>權重評分：</strong> 將多個指標標準化為單一「AI 評級分數」，一目了然。</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-blue-500 mt-1">▪</span>
+                            <span><strong>客觀紀律：</strong> 透過數值定義「超買/超賣」，不被市場氛圍綁架。</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-blue-500 mt-1">▪</span>
+                            <span><strong>多週期對齊：</strong> 系統強制進行日/周/月線重採樣，確保趨勢級別正確。</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section id="features" class="py-24 bg-slate-900">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white mb-4">六大核心模組</h2>
+                <p class="text-slate-400">打造機構級的個人研究終端</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- F1 -->
+                <div class="feature-card p-6 rounded-2xl">
+                    <div
+                        class="w-10 h-10 bg-blue-500/20 text-blue-400 rounded-lg flex items-center justify-center text-xl mb-4">
+                        🔄</div>
+                    <h3 class="text-lg font-bold text-white mb-2">多週期重採樣引擎</h3>
+                    <p class="text-slate-400 text-sm">
+                        一般免費軟體只有日線。本系統內建演算法，能即時將日線數據合成為<strong>周線</strong>與<strong>月線</strong>，讓您能從上帝視角審視長線趨勢。
+                    </p>
+                </div>
+                <!-- F2 -->
+                <div class="feature-card p-6 rounded-2xl">
+                    <div
+                        class="w-10 h-10 bg-purple-500/20 text-purple-400 rounded-lg flex items-center justify-center text-xl mb-4">
+                        ⚖️</div>
+                    <h3 class="text-lg font-bold text-white mb-2">動態權重模型</h3>
+                    <p class="text-slate-400 text-sm">
+                        不同盤勢需要不同策略。透過滑桿調整 MA (趨勢)、RSI (震盪) 等指標的權重，AI 評分即時連動，幫助您找到最佳參數。
+                    </p>
+                </div>
+                <!-- F3 -->
+                <div class="feature-card p-6 rounded-2xl">
+                    <div
+                        class="w-10 h-10 bg-green-500/20 text-green-400 rounded-lg flex items-center justify-center text-xl mb-4">
+                        📊</div>
+                    <h3 class="text-lg font-bold text-white mb-2">互動式視覺圖表</h3>
+                    <p class="text-slate-400 text-sm">
+                        拋棄靜態圖片。這裡提供的是基於 ApexCharts 的互動圖表，支援<strong>全螢幕放大</strong>、十字游標追蹤、數據點擊細節顯示。
+                    </p>
+                </div>
+                <!-- F4 -->
+                <div class="feature-card p-6 rounded-2xl">
+                    <div
+                        class="w-10 h-10 bg-orange-500/20 text-orange-400 rounded-lg flex items-center justify-center text-xl mb-4">
+                        🌍</div>
+                    <h3 class="text-lg font-bold text-white mb-2">跨市場數據整合</h3>
+                    <p class="text-slate-400 text-sm">
+                        同時支援<strong>台灣股市 (上市櫃)</strong> 與 <strong>Binance 加密貨幣</strong>。一套系統，掌握兩種截然不同的金融市場。
+                    </p>
+                </div>
+                <!-- F5 -->
+                <div class="feature-card p-6 rounded-2xl">
+                    <div
+                        class="w-10 h-10 bg-cyan-500/20 text-cyan-400 rounded-lg flex items-center justify-center text-xl mb-4">
+                        🤖</div>
+                    <h3 class="text-lg font-bold text-white mb-2">智能訊號偵測</h3>
+                    <p class="text-slate-400 text-sm">
+                        系統會自動掃描「黃金交叉」、「布林突破」、「RSI 背離」等關鍵形態，並以文字列表呈現，不錯過任何機會。
+                    </p>
+                </div>
+                <!-- F6 -->
+                <div class="feature-card p-6 rounded-2xl">
+                    <div
+                        class="w-10 h-10 bg-pink-500/20 text-pink-400 rounded-lg flex items-center justify-center text-xl mb-4">
+                        🛡️</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Client-Side 架構</h3>
+                    <p class="text-slate-400 text-sm">
+                        您的查詢紀錄與數據運算完全在<strong>本地瀏覽器</strong>執行，不經過任何後端伺服器，確保最高等級的隱私與速度。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Indicators Deep Dive (New Section) -->
+    <section id="indicators" class="py-24 bg-slate-850 border-y border-slate-800">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white mb-4">五大技術指標詳解</h2>
+                <p class="text-slate-400">掌握每個指標的底層邏輯，不再盲目跟單</p>
+            </div>
+
+            <div class="space-y-8">
+                <!-- MA -->
+                <div class="feature-card p-8 rounded-2xl flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/3 flex-shrink-0">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="text-2xl">📉</div>
+                            <h3 class="text-xl font-bold text-white">MA 移動平均線</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="indicator-tag border-blue-500/50 text-blue-400">趨勢型</span>
+                            <span class="indicator-tag border-slate-600 text-slate-400">滯後指標</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+                            Moving Average。代表過去一段時間市場的「平均成本」。是判斷大趨勢最基礎也最重要的工具。
+                        </p>
+                    </div>
+                    <div class="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-green-400 mb-2">📈 多頭訊號 (買進)</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>股價站上均線，且均線向上彎頭。</li>
+                                <li>短均線(如5日) 向上穿過 長均線(如20日)，稱為<strong>黃金交叉</strong>。</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-red-400 mb-2">📉 空頭訊號 (賣出)</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>股價跌破均線，且均線向下彎頭。</li>
+                                <li>短均線 向下穿過 長均線，稱為<strong>死亡交叉</strong>。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MACD -->
+                <div class="feature-card p-8 rounded-2xl flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/3 flex-shrink-0">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="text-2xl">🌊</div>
+                            <h3 class="text-xl font-bold text-white">MACD 動能指標</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="indicator-tag border-purple-500/50 text-purple-400">動能型</span>
+                            <span class="indicator-tag border-slate-600 text-slate-400">趨勢跟隨</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+                            Moving Average Convergence Divergence。透過兩條均線的乖離程度，判斷趨勢的強弱與轉折。柱狀體 (Histogram) 是觀察重點。
+                        </p>
+                    </div>
+                    <div class="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-green-400 mb-2">📈 買進判斷</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>柱狀體由綠翻紅 (負轉正)，代表空方力竭，多方起攻。</li>
+                                <li>快線 (DIF) 向上突破 慢線 (Signal) 且在0軸之上，為強勢多頭。</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-red-400 mb-2">📉 賣出判斷</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>柱狀體由紅翻綠 (正轉負)，代表漲勢受阻。</li>
+                                <li>快線向下跌破慢線，且在高檔區，需注意回檔。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RSI -->
+                <div class="feature-card p-8 rounded-2xl flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/3 flex-shrink-0">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="text-2xl">⚡</div>
+                            <h3 class="text-xl font-bold text-white">RSI 相對強弱指標</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="indicator-tag border-pink-500/50 text-pink-400">震盪型</span>
+                            <span class="indicator-tag border-slate-600 text-slate-400">逆勢指標</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+                            Relative Strength Index。測量買賣雙方力道的強弱。數值介於 0~100。主要用於抓「過熱」與「超賣」。
+                        </p>
+                    </div>
+                    <div class="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-blue-400 mb-2">💎 超賣區 (機會)</h4>
+                            <p class="text-slate-300 mb-2">數值 <strong>&lt; 30</strong></p>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>代表市場過度恐慌，隨時可能出現跌深反彈。</li>
+                                <li>若股價破底但 RSI 未破底 (背離)，是強烈買訊。</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-orange-400 mb-2">⚠️ 超買區 (警戒)</h4>
+                            <p class="text-slate-300 mb-2">數值 <strong>&gt; 70</strong></p>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>代表市場過度樂觀，追高風險極大。</li>
+                                <li>強勢股可能會鈍化 (長期 > 80)，不宜輕易放空，但絕不追價。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BB -->
+                <div class="feature-card p-8 rounded-2xl flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/3 flex-shrink-0">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="text-2xl">📊</div>
+                            <h3 class="text-xl font-bold text-white">Bollinger Bands 布林通道</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="indicator-tag border-yellow-500/50 text-yellow-400">波動率型</span>
+                            <span class="indicator-tag border-slate-600 text-slate-400">標準差應用</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+                            利用統計學的標準差原理，畫出股價的「信賴區間」。通道寬度代表波動率，越寬代表波動越大。
+                        </p>
+                    </div>
+                    <div class="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-green-400 mb-2">🚀 突破訊號</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>經過長期壓縮後，K棒帶量突破<strong>上軌</strong>，且開口放大，代表單邊趨勢發動。</li>
+                                <li>股價沿著上軌漫步，是強勢股特徵。</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-slate-300 mb-2">🛡️ 區間操作</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>在盤整盤中，<strong>上軌視為壓力，下軌視為支撐</strong>。</li>
+                                <li>股價觸碰下軌後收紅 K，是搶反彈的好位置。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KD -->
+                <div class="feature-card p-8 rounded-2xl flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/3 flex-shrink-0">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="text-2xl">🎲</div>
+                            <h3 class="text-xl font-bold text-white">KD 隨機指標</h3>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="indicator-tag border-cyan-500/50 text-cyan-400">震盪型</span>
+                            <span class="indicator-tag border-slate-600 text-slate-400">短線靈敏</span>
+                        </div>
+                        <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+                            Stochastic Oscillator。反應股價在當天波動範圍內的相對位置。比 RSI 更靈敏，適合短線進出。
+                        </p>
+                    </div>
+                    <div class="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-green-400 mb-2">✨ 黃金交叉 (買進)</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>K值由下往上穿過D值。</li>
+                                <li>發生在 20 以下的低檔區，準確度最高。</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                            <h4 class="font-bold text-red-400 mb-2">☠️ 死亡交叉 (賣出)</h4>
+                            <ul class="list-disc list-inside text-slate-300 space-y-1">
+                                <li>K值由上往下穿過D值。</li>
+                                <li>發生在 80 以上的高檔區，代表短線頭部成形。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Signal Matrix -->
+    <section id="matrix" class="py-24 bg-slate-900">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-white mb-8 text-center">訊號解讀矩陣</h2>
+            <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
+                AI 評分是基於多個指標的綜合運算結果。以下表格協助您快速判斷不同分數區間應採取的交易策略。
+            </p>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-700 shadow-2xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr>
+                            <th class="matrix-header matrix-cell w-1/4">AI 綜合評分</th>
+                            <th class="matrix-header matrix-cell w-1/4">市場情緒</th>
+                            <th class="matrix-header matrix-cell w-1/2">建議操作策略</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-slate-900">
+                        <tr>
+                            <td class="matrix-cell text-red-400 font-bold font-mono">> 2.0</td>
+                            <td class="matrix-cell text-white">🔥 極度樂觀 (超買)</td>
+                            <td class="matrix-cell text-slate-400">趨勢極強，但需提防乖離過大回檔。適合持有者續抱，空手者勿追高。</td>
+                        </tr>
+                        <tr>
+                            <td class="matrix-cell text-red-400 font-bold font-mono">0.5 ~ 2.0</td>
+                            <td class="matrix-cell text-white">📈 多頭主導</td>
+                            <td class="matrix-cell text-slate-400">各項指標呈現多頭排列 (如均線向上、KD金叉)。適合順勢找買點建立部位。</td>
+                        </tr>
+                        <tr>
+                            <td class="matrix-cell text-slate-400 font-bold font-mono">-0.5 ~ 0.5</td>
+                            <td class="matrix-cell text-white">⚖️ 盤整 / 觀望</td>
+                            <td class="matrix-cell text-slate-400">多空訊號抵銷 (例如: 均線向上但 RSI 超買)。建議空手觀望，等待方向明確。</td>
+                        </tr>
+                        <tr>
+                            <td class="matrix-cell text-green-400 font-bold font-mono">-2.0 ~ -0.5</td>
+                            <td class="matrix-cell text-white">📉 空頭主導</td>
+                            <td class="matrix-cell text-slate-400">趨勢向下，指標偏弱。適合減碼、避險或尋找放空機會。</td>
+                        </tr>
+                        <tr>
+                            <td class="matrix-cell text-green-400 font-bold font-mono">
+                                < -2.0</td>
+                            <td class="matrix-cell text-white">❄️ 極度恐慌 (超賣)</td>
+                            <td class="matrix-cell text-slate-400">出現恐慌性拋售，但也可能醞釀反彈。激進者可嘗試搶反彈，穩健者等待止跌訊號。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="py-24 bg-slate-850 border-t border-slate-800">
+        <div class="max-w-3xl mx-auto px-6">
+            <h2 class="text-3xl font-bold text-white mb-12 text-center">常見問題 (FAQ)</h2>
+
+            <div class="space-y-4">
+                <details
+                    class="bg-slate-800/50 rounded-xl border border-slate-700 open:bg-slate-800 open:border-blue-500/50 transition-all">
+                    <summary class="p-6 font-bold text-white flex justify-between items-center">
+                        Q: 為什麼有些冷門台股跑不出資料？
+                        <span
+                            class="text-blue-400 text-xl transform transition-transform duration-300 open:rotate-180">+</span>
+                    </summary>
+                    <div class="px-6 pb-6 text-slate-400 text-sm leading-relaxed border-t border-slate-700/50 pt-4">
+                        系統使用 FinMind 的免費公開 API。部分極冷門股票或新上市股票，FinMind 資料庫可能尚未更新或數據量不足。若選擇「月線」分析，需要至少 5
+                        年的歷史數據，新股可能會因此無法顯示圖表。
+                    </div>
+                </details>
+
+                <details
+                    class="bg-slate-800/50 rounded-xl border border-slate-700 open:bg-slate-800 open:border-blue-500/50 transition-all">
+                    <summary class="p-6 font-bold text-white flex justify-between items-center">
+                        Q: 數據是即時的嗎？有延遲嗎？
+                        <span
+                            class="text-blue-400 text-xl transform transition-transform duration-300 open:rotate-180">+</span>
+                    </summary>
+                    <div class="px-6 pb-6 text-slate-400 text-sm leading-relaxed border-t border-slate-700/50 pt-4">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>加密貨幣 (Binance)</strong>：接近即時 (Real-time)，僅受網路傳輸影響。</li>
+                            <li><strong>台股 (FinMind)</strong>：盤中資料約有 1~5 分鐘延遲，主要作為盤後分析使用更佳。每日收盤後 (約 14:00) 會有最完整的當日數據。
+                            </li>
+                        </ul>
+                    </div>
+                </details>
+
+                <details
+                    class="bg-slate-800/50 rounded-xl border border-slate-700 open:bg-slate-800 open:border-blue-500/50 transition-all">
+                    <summary class="p-6 font-bold text-white flex justify-between items-center">
+                        Q: 什麼時候該調整「模型權重」？
+                        <span
+                            class="text-blue-400 text-xl transform transition-transform duration-300 open:rotate-180">+</span>
+                    </summary>
+                    <div class="px-6 pb-6 text-slate-400 text-sm leading-relaxed border-t border-slate-700/50 pt-4">
+                        這取決於您的交易風格：
+                        <br>• <strong>趨勢操作者</strong>：當大盤走勢明確時，建議調高 <strong>MA (趨勢)</strong> 與 <strong>MACD</strong>
+                        的權重，降低震盪指標的干擾。
+                        <br>• <strong>箱型整理/短線客</strong>：當市場無明顯方向時，建議調高 <strong>KD</strong> 與 <strong>RSI</strong>
+                        的權重，以捕捉高出低進的機會。
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="py-20 bg-gradient-to-b from-slate-900 to-blue-900/20 text-center">
+        <div class="max-w-3xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-6">準備好提升您的交易勝率了嗎？</h2>
+            <p class="text-slate-400 mb-10">無需註冊，無需下載，立即體驗最先進的前端量化分析工具。</p>
+            <a href="https://gemini.google.com/share/bb12c35fe698" target="_blank"
+                class="btn-primary px-12 py-5 rounded-2xl font-bold text-xl inline-flex items-center gap-3 shadow-2xl hover:shadow-blue-500/50 transition-all transform hover:-translate-y-1">
+                👉 開啟 AI 投資儀表板
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-10 bg-slate-950 border-t border-slate-800 text-center">
+        <div class="max-w-7xl mx-auto px-6">
+            <p class="text-slate-500 text-sm">
+                Data Sources: <a href="https://finmind.github.io/" target="_blank"
+                    class="underline hover:text-blue-400">FinMind API</a> & <a
+                    href="https://binance-docs.github.io/apidocs/spot/en/" target="_blank"
+                    class="underline hover:text-blue-400">Binance Public API</a>
+            </p>
+            <p class="mt-4 text-slate-600 text-xs">
+                免責聲明：本工具僅供技術分析研究與教育用途，不構成任何投資建議。金融市場存在風險，使用者應自行承擔交易後果。
+                <br>Copyright &copy; 2026 AI Stock Analyzer Pro. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

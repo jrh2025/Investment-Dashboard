@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能投資儀表板 | Stock Analyzer Pro</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Libraries -->
+    <!-- 1. Vue 3 (Global) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 2. ApexCharts Core (Global) -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <!-- 移除有問題的 vue3-apexcharts CDN，改用內部手動實作 -->
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Noto Sans TC', 'Segoe UI', sans-serif;
+        }
+
+        .card {
+            background-color: #1e293b;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .input-dark {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .input-dark:focus {
+            border-color: #3b82f6;
+            ring: 2px;
+            ring-color: #3b82f6;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #ffffff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .text-up {
+            color: #ef4444;
+        }
+
+        .text-down {
+            color: #22c55e;
+        }
+
+        .bg-up-soft {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .bg-down-soft {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 指標說明文字樣式 */
+        .indicator-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 0.75rem;
+            line-height: 1.6;
+            padding: 0.75rem;
+            background: #0f172a;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+        }
+
+        .indicator-desc strong {
+            color: #3b82f6;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .indicator-desc ul {
+            margin-left: 1.25rem;
+            list-style-type: disc;
+        }
+
+        .indicator-desc li {
+            margin-bottom: 0.25rem;
+        }
+
+        /* 權重滑桿樣式 */
+        .slider-container {
+            margin-bottom: 0.5rem;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            margin-bottom: 0.25rem;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #475569;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+        }
+
+        /* 全螢幕模式下的卡片樣式 */
+        .card-fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 50;
+            background-color: #1e293b;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-icon {
+            @apply p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors;
+        }
+
+        /* Chart Container Strict Sizing */
+        .chart-wrapper {
+            width: 100%;
+            position: relative;
+        }
+
+        /* Matrix Table Styles */
+        .matrix-table th {
+            @apply bg-slate-700/50 text-slate-300 font-bold p-3 text-left border-b border-slate-600;
+        }
+
+        .matrix-table td {
+            @apply p-3 border-b border-slate-700/30 text-sm text-slate-400;
+        }
+
+        .matrix-table tr:last-child td {
+            @apply border-b-0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app" class="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
+
+        <!-- Help Modal -->
+        <div v-if="showHelpModal" class="fixed inset-0 z-[100] flex items-center justify-center px-4 animate-fade-in">
+            <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" @click="showHelpModal = false"></div>
+            <div
+                class="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-3xl p-6 relative z-10 max-h-[90vh] overflow-y-auto">
+                <button @click="showHelpModal = false"
+                    class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+
+                <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span class="text-2xl">🤖</span> AI 評級模型與操作策略詳解
+                </h3>
+
+                <div class="space-y-6">
+                    <div>
+                        <h4 class="text-blue-400 font-bold mb-3 flex items-center gap-2">📊 訊號解讀矩陣 (Signal Matrix)</h4>
+                        <p class="text-slate-400 text-sm mb-3">AI 綜合評分是將均線趨勢、RSI 強弱、MACD 動能等多項指標正規化後的加權總分。分數範圍約落在 -3.0 到
+                            +3.0 之間。</p>
+                        <div class="overflow-x-auto rounded-lg border border-slate-700">
+                            <table class="w-full matrix-table">
+                                <thead>
+                                    <tr>
+                                        <th class="w-1/4">AI 評分</th>
+                                        <th class="w-1/4">市場情緒</th>
+                                        <th class="w-1/2">建議操作策略</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="bg-slate-800/30">
+                                        <td class="text-red-400 font-bold font-mono">> 2.0</td>
+                                        <td class="text-white">🔥 極度樂觀 (超買)</td>
+                                        <td>趨勢極強，但乖離過大。持有者續抱並移動停利，空手者<span class="text-red-400 font-bold">切勿追高</span>。
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-red-400 font-bold font-mono">0.5 ~ 2.0</td>
+                                        <td class="text-white">📈 多頭主導</td>
+                                        <td>技術面呈多頭排列 (如均線向上、KD金叉)。適合<span
+                                                class="text-red-400 font-bold">順勢找買點</span>建立部位。</td>
+                                    </tr>
+                                    <tr class="bg-slate-800/30">
+                                        <td class="text-slate-300 font-bold font-mono">-0.5 ~ 0.5</td>
+                                        <td class="text-white">⚖️ 盤整 / 觀望</td>
+                                        <td>多空訊號抵銷 (如: 均線向上但 RSI 背離)。建議<span
+                                                class="text-slate-300 font-bold">空手觀望</span>或區間操作。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-green-400 font-bold font-mono">-2.0 ~ -0.5</td>
+                                        <td class="text-white">📉 空頭主導</td>
+                                        <td>趨勢向下，支撐跌破。適合<span class="text-green-400 font-bold">減碼、避險</span>或尋找放空機會。</td>
+                                    </tr>
+                                    <tr class="bg-slate-800/30">
+                                        <td class="text-green-400 font-bold font-mono">
+                                            < -2.0</td>
+                                        <td class="text-white">❄️ 極度恐慌 (超賣)</td>
+                                        <td>出現恐慌性拋售，但也可能醞釀反彈。激進者可<span
+                                                class="text-green-400 font-bold">搶短線反彈</span>，穩健者等待底部確認。</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-blue-400 font-bold mb-3 flex items-center gap-2">⚙️ 評分運算邏輯 (Feature Engineering)
+                        </h4>
+                        <ul
+                            class="text-sm text-slate-400 space-y-2 list-disc list-inside bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
+                            <li><strong>趨勢因子 (MA):</strong> 股價 > MA20 得正分，反之得負分。這是判斷趨勢最基礎的依據。</li>
+                            <li><strong>動能因子 (MACD):</strong> 柱狀體 (Hist) 翻紅且放大得正分，翻綠得負分。反應趨勢的加速度。</li>
+                            <li><strong>波動因子 (BB):</strong> 突破布林上軌視為強勢噴出 (正分)，觸及下軌視為支撐 (正分，但權重較低，因需防接刀)。</li>
+                            <li><strong>反轉因子 (RSI/KD):</strong> 低檔黃金交叉 (KD < 30) 給予極高正分，判斷底部轉折；高檔鈍化或背離給予負分。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center border-t border-slate-700 pt-4">
+                    <button @click="showHelpModal = false"
+                        class="btn-primary px-8 py-2 rounded-lg font-bold">我瞭解了</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header Section -->
+        <header
+            class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-700 pb-6">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                    <span class="text-blue-500">⚡</span>
+                    AI 智能投資儀表板
+                    <span
+                        class="text-xs font-mono bg-blue-900/50 text-blue-200 px-2 py-0.5 rounded border border-blue-800">PRO</span>
+                </h1>
+                <p class="text-slate-400 text-sm mt-1 max-w-xl">
+                    整合 FinMind 與 Binance 數據，透過前端特徵工程運算，提供即時的技術面量化分析報告。
+                </p>
+            </div>
+
+            <!-- Source Switcher -->
+            <div class="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+                <button @click="dataSource = 'TWSTOCK'"
+                    :class="['px-5 py-2 rounded-md font-medium text-sm transition-all duration-200', dataSource === 'TWSTOCK' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white']">
+                    🇹🇼 台股
+                </button>
+                <button @click="dataSource = 'CRYPTO'"
+                    :class="['px-5 py-2 rounded-md font-medium text-sm transition-all duration-200', dataSource === 'CRYPTO' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white']">
+                    ₿ 加密貨幣
+                </button>
+            </div>
+        </header>
+
+        <!-- Controls & Weights -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-8">
+
+            <!-- Main Controls (Redesigned Layout) -->
+            <div class="card p-6 xl:col-span-8 flex flex-col gap-6">
+
+                <!-- Top: Big Stock Input -->
+                <div v-if="dataSource === 'TWSTOCK'" class="w-full">
+                    <label
+                        class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider flex justify-between">
+                        <span>股票代號 (Stock Symbol)</span>
+                        <span class="text-xs text-blue-400">請輸入上市櫃代碼 (如 2330)</span>
+                    </label>
+                    <div class="relative group">
+                        <input v-model="twStockSymbol" @keyup.enter="fetchData" type="text"
+                            class="input-dark w-full px-6 py-5 rounded-2xl font-mono text-5xl font-bold tracking-widest text-center focus:ring-4 focus:ring-blue-500/30 transition-all placeholder-slate-700 shadow-inner bg-slate-900/50"
+                            placeholder="2330">
+                        <div
+                            class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-xl pointer-events-none group-focus-within:text-blue-500 transition-colors hidden sm:block">
+                            TWSE
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="dataSource === 'CRYPTO'" class="w-full">
+                    <label
+                        class="block text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider flex justify-between">
+                        <span>交易對 (Binance Pair)</span>
+                        <span class="text-xs text-yellow-400">請輸入幣安交易對 (如 BTCUSDT)</span>
+                    </label>
+                    <div class="relative group">
+                        <input v-model="cryptoSymbol" @keyup.enter="fetchData" type="text"
+                            class="input-dark w-full px-6 py-5 rounded-2xl font-mono text-5xl font-bold tracking-widest text-center focus:ring-4 focus:ring-yellow-500/30 transition-all placeholder-slate-700 shadow-inner bg-slate-900/50 uppercase"
+                            placeholder="BTCUSDT">
+                        <div
+                            class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 font-bold text-xl pointer-events-none group-focus-within:text-yellow-500 transition-colors hidden sm:block">
+                            CRYPTO
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle: Settings Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Analysis Period -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">分析週期
+                            (Timeframe)</label>
+                        <div class="relative">
+                            <select v-model="interval"
+                                class="input-dark w-full px-4 py-3.5 rounded-xl appearance-none cursor-pointer font-bold text-lg text-center border-slate-600 hover:border-slate-500 transition-colors">
+                                <option value="1d">日線 (Daily)</option>
+                                <option value="1w">周線 (Weekly)</option>
+                                <option value="1mo">月線 (Monthly)</option>
+                            </select>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-2 text-center"
+                            v-if="dataSource === 'TWSTOCK' && interval !== '1d'">
+                            * 系統將自動抓取長天期數據進行重採樣
+                        </p>
+                    </div>
+
+                    <!-- Token (Optional) / Spacer -->
+                    <div v-if="dataSource === 'TWSTOCK'">
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">FinMind
+                            Token (選填)</label>
+                        <input v-model="finMindToken" type="password"
+                            class="input-dark w-full px-4 py-3.5 rounded-xl text-sm text-center border-slate-600 hover:border-slate-500 transition-colors"
+                            placeholder="避免 API 頻率限制">
+                    </div>
+                    <div v-else class="hidden md:flex items-end justify-center pb-2">
+                        <span class="text-xs text-slate-600 border border-slate-700 rounded-full px-3 py-1">Binance
+                            Public API (無需 Token)</span>
+                    </div>
+                </div>
+
+                <!-- Bottom: Huge CTA Button -->
+                <button @click="fetchData" :disabled="loading"
+                    class="btn-primary w-full py-5 rounded-2xl font-black text-2xl tracking-widest shadow-xl hover:shadow-blue-500/40 transform active:scale-[0.98] transition-all flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden">
+                    <div
+                        class="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500 ease-out -skew-x-12 -translate-x-full">
+                    </div>
+                    <div v-if="loading" class="loading-spinner"></div>
+                    <span v-else class="flex items-center gap-3 relative z-10">
+                        開始智能分析
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-8 w-8 group-hover:translate-x-2 transition-transform" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Weights Settings -->
+            <div class="card p-5 xl:col-span-4 flex flex-col justify-center">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-700/50">
+                    <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                        ⚖️ AI 模型權重配置
+                        <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 rounded">自訂義</span>
+                    </h3>
+                    <button @click="resetWeights"
+                        class="text-xs text-blue-400 hover:text-blue-300 transition-colors">重置</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-6 gap-y-1">
+                    <div class="slider-container">
+                        <div class="slider-label">MA 趨勢 <span>{{ weights.ma }}%</span></div>
+                        <input type="range" min="0" max="100" v-model.number="weights.ma" class="slider">
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">MACD 動能 <span>{{ weights.macd }}%</span></div>
+                        <input type="range" min="0" max="100" v-model.number="weights.macd" class="slider">
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">RSI 強弱 <span>{{ weights.rsi }}%</span></div>
+                        <input type="range" min="0" max="100" v-model.number="weights.rsi" class="slider">
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-label">BB 通道 <span>{{ weights.bb }}%</span></div>
+                        <input type="range" min="0" max="100" v-model.number="weights.bb" class="slider">
+                    </div>
+                    <div class="slider-container col-span-2">
+                        <div class="slider-label">KD 隨機 <span>{{ weights.kd }}%</span></div>
+                        <input type="range" min="0" max="100" v-model.number="weights.kd" class="slider">
+                    </div>
+                </div>
+                <div class="text-[10px] text-center mt-1"
+                    :class="totalWeight === 100 ? 'text-green-500' : 'text-orange-400'">
+                    當前總權重: {{ totalWeight }}% (建議維持 100% 以獲得最佳準確度)
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Alert -->
+        <div v-if="errorMsg"
+            class="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-4 rounded-lg mb-8 flex items-center gap-3 animate-fade-in">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{{ errorMsg }}</span>
+        </div>
+
+        <!-- Dashboard Content -->
+        <!-- key="chartKey" ensures complete re-render of charts when data updates -->
+        <div v-if="rawData.length > 0 && indicatorsReady" :key="chartKey"
+            class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+
+            <!-- Left Column: Report & Summary (Sticky on Desktop) -->
+            <div class="lg:col-span-3 space-y-6">
+
+                <!-- AI Score Card -->
+                <div class="card p-6 relative overflow-hidden group">
+                    <div
+                        class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+                    </div>
+
+                    <!-- Score Header -->
+                    <div class="flex justify-between items-center mb-3 relative z-10">
+                        <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest">AI 綜合技術評級</h3>
+                        <button @click="showHelpModal = true"
+                            class="text-slate-500 hover:text-blue-400 transition-colors p-1 rounded-full hover:bg-slate-700/50"
+                            title="查看評級說明">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Main Score & Mood -->
+                    <div class="flex justify-between items-end mb-4">
+                        <div>
+                            <div class="text-5xl font-black mb-1 font-mono leading-none"
+                                :class="analysisReport.matrix?.color">
+                                {{ analysisReport.score.toFixed(2) }}
+                            </div>
+                            <div class="text-sm font-bold tracking-wide" :class="analysisReport.matrix?.color">
+                                {{ analysisReport.matrix?.mood }}
+                            </div>
+                        </div>
+                        <div class="text-right text-xs text-slate-400 mb-1 max-w-[120px]">
+                            <div class="mb-1 font-bold text-slate-300">建議操作</div>
+                            {{ analysisReport.matrix?.action }}
+                        </div>
+                    </div>
+
+                    <!-- Score Breakdown (Calculation Formula) -->
+                    <div class="mt-4 pt-3 border-t border-slate-700/50">
+                        <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">
+                            評分算式 (Calculation Breakdown)
+                        </div>
+
+                        <div class="space-y-2">
+                            <div v-for="item in analysisReport.details" :key="item.name"
+                                class="flex justify-between items-center text-xs">
+                                <div class="flex flex-col">
+                                    <span class="text-slate-300 font-medium">{{ item.name }}</span>
+                                    <span class="text-[10px] text-slate-500">權重 {{ item.weight }}%</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <!-- Bar representation -->
+                                    <div class="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+                                        <!-- Negative bar (right aligned in left half) -->
+                                        <div class="w-1/2 h-full flex justify-end">
+                                            <div v-if="item.val < 0" class="h-full bg-green-500"
+                                                :style="{ width: Math.min(Math.abs(item.val)/1.0 * 100, 100) + '%' }">
+                                            </div>
+                                        </div>
+                                        <!-- Positive bar (left aligned in right half) -->
+                                        <div class="w-1/2 h-full flex justify-start">
+                                            <div v-if="item.val > 0" class="h-full bg-red-500"
+                                                :style="{ width: Math.min(Math.abs(item.val)/1.0 * 100, 100) + '%' }">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="font-mono w-10 text-right font-bold"
+                                        :class="item.val > 0 ? 'text-red-400' : (item.val < 0 ? 'text-green-400' : 'text-slate-500')">
+                                        {{ item.val > 0 ? '+' : ''}}{{ item.val.toFixed(2) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-3 pt-2 border-t border-slate-700/30 text-[10px] text-slate-500 text-center italic">
+                            Score = Σ (原始訊號 × 權重 × 3)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Summary Card -->
+                <div class="card p-5">
+                    <!-- Stock Name Header -->
+                    <div class="mb-4 border-b border-slate-700/50 pb-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-xl font-bold text-white tracking-wide leading-tight">
+                                    <span v-if="stockName">{{ stockName }}</span>
+                                    <span v-else class="text-slate-400">{{ dataSource === 'TWSTOCK' ? twStockSymbol :
+                                        cryptoSymbol }}</span>
+                                </h2>
+                                <p class="text-xs text-slate-400 mt-0.5 font-mono" v-if="dataSource === 'TWSTOCK'">Code:
+                                    {{ twStockSymbol }}</p>
+                            </div>
+                            <span v-if="stockIndustry"
+                                class="text-[10px] bg-slate-700 text-slate-300 px-2 py-1 rounded-full border border-slate-600">
+                                {{ stockIndustry }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Price Data -->
+                    <div class="flex justify-between items-baseline mb-1">
+                        <span class="text-4xl font-bold text-white tracking-tight font-mono">{{ currentPrice }}</span>
+                        <span class="text-lg font-bold font-mono px-2 py-0.5 rounded"
+                            :class="priceChange >= 0 ? 'bg-up-soft' : 'bg-down-soft'">
+                            {{ priceChange >= 0 ? '▲' : '▼' }} {{ Math.abs(priceChange) }}%
+                        </span>
+                    </div>
+
+                    <!-- Date & Volume -->
+                    <div class="text-xs text-slate-500 mb-4 text-right tracking-wide font-mono">
+                        Data: {{ currentDate }}
+                    </div>
+                    <div
+                        class="flex justify-between items-center text-xs text-slate-400 border-t border-slate-700/50 pt-3">
+                        <div class="flex flex-col">
+                            <span class="uppercase text-[10px] font-bold text-slate-500">週期</span>
+                            <span class="font-mono text-white bg-slate-700 px-1.5 rounded">{{ getIntervalText(interval)
+                                }}</span>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="uppercase text-[10px] font-bold text-slate-500">成交量</span>
+                            <span class="font-mono font-bold text-white">{{ formatVolume(currentVolume) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signal List -->
+                <div class="card p-5 h-auto">
+                    <h4 class="font-bold text-white text-sm mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        關鍵技術訊號偵測
+                    </h4>
+                    <ul class="space-y-3">
+                        <li v-for="signal in analysisReport.signals" :key="signal.title"
+                            class="flex gap-3 items-start text-sm p-2.5 rounded-lg bg-slate-800/50 border border-slate-700/30 hover:border-slate-600 transition-colors">
+                            <span class="mt-0.5 text-lg">{{ signal.icon }}</span>
+                            <div class="flex flex-col">
+                                <span class="text-slate-200 font-bold text-xs">{{ signal.title }}</span>
+                                <span class="text-slate-400 text-xs mt-0.5 leading-snug">{{ signal.desc }}</span>
+                            </div>
+                        </li>
+                        <li v-if="analysisReport.signals.length === 0"
+                            class="text-slate-500 italic text-xs text-center py-6 border border-dashed border-slate-700 rounded-lg">
+                            目前走勢膠著，無顯著強勢訊號
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right Column: Visualizations -->
+            <div class="lg:col-span-9 space-y-6">
+
+                <!-- Main Chart: Candlestick + MA + BB -->
+                <div :class="fullScreenChart === 'main' ? 'card-fullscreen' : 'card p-5'">
+                    <div class="flex justify-between items-center mb-1 border-b border-slate-700/50 pb-2">
+                        <h3 class="text-slate-300 font-bold flex items-center gap-2 text-sm">
+                            <span>📊</span> K線趨勢與布林通道
+                        </h3>
+                        <button @click="toggleFullScreen('main')" class="btn-icon" title="全螢幕切換">
+                            <svg v-if="fullScreenChart === 'main'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Chart Wrapper -->
+                    <div class="chart-wrapper"
+                        :style="{ minHeight: fullScreenChart === 'main' ? '0' : '450px', flexGrow: fullScreenChart === 'main' ? 1 : 0 }">
+                        <apexchart type="candlestick" :height="fullScreenChart === 'main' ? '92%' : 450"
+                            :options="mainChartOptions" :series="mainChartSeries"></apexchart>
+                    </div>
+
+                    <!-- Contextual Analysis -->
+                    <div class="indicator-desc mt-2" v-if="fullScreenChart !== 'main'">
+                        <strong>觀察重點 (Key Insights)：</strong>
+                        <ul class="text-xs space-y-1">
+                            <li><span class="text-red-400 font-bold">紅K</span> / <span
+                                    class="text-green-400 font-bold">綠K</span>：代表當{{ getIntervalText(interval) }}漲跌。
+                            </li>
+                            <li><span class="text-blue-400 font-bold">MA20</span>：{{ getMAContext(interval) }}</li>
+                            <li><span class="text-slate-400 font-bold">布林通道</span>：股價突破上軌常代表強勢噴出（或超買）；觸及下軌常有支撐（或超賣）。
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Sub Charts Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- MACD Chart -->
+                    <div :class="fullScreenChart === 'macd' ? 'card-fullscreen' : 'card p-5'">
+                        <div class="flex justify-between items-center mb-1 pb-2 border-b border-slate-700/50">
+                            <h3 class="text-slate-300 text-sm font-bold flex items-center gap-2"><span>🌊</span> MACD
+                                動能指標</h3>
+                            <button @click="toggleFullScreen('macd')" class="btn-icon">
+                                <svg v-if="fullScreenChart === 'macd'" xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="chart-wrapper"
+                            :style="{ minHeight: fullScreenChart === 'macd' ? '0' : '220px', flexGrow: fullScreenChart === 'macd' ? 1 : 0 }">
+                            <apexchart type="line" :height="fullScreenChart === 'macd' ? '90%' : 220"
+                                :options="macdChartOptions" :series="macdChartSeries"></apexchart>
+                        </div>
+                        <div class="indicator-desc mt-2" v-if="fullScreenChart !== 'macd'">
+                            <strong>解讀：</strong>
+                            <p class="text-xs mt-1">柱狀體(Hist) <span class="text-red-400">紅色</span> 轉強，<span
+                                    class="text-green-400">綠色</span> 轉弱。DIF突破Signal為黃金交叉。</p>
+                        </div>
+                    </div>
+
+                    <!-- Oscillators Chart -->
+                    <div :class="fullScreenChart === 'oscillator' ? 'card-fullscreen' : 'card p-5'">
+                        <div class="flex justify-between items-center mb-1 pb-2 border-b border-slate-700/50">
+                            <h3 class="text-slate-300 text-sm font-bold flex items-center gap-2"><span>📈</span> RSI &
+                                KD 震盪指標</h3>
+                            <button @click="toggleFullScreen('oscillator')" class="btn-icon">
+                                <svg v-if="fullScreenChart === 'oscillator'" xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="chart-wrapper"
+                            :style="{ minHeight: fullScreenChart === 'oscillator' ? '0' : '220px', flexGrow: fullScreenChart === 'oscillator' ? 1 : 0 }">
+                            <apexchart type="line" :height="fullScreenChart === 'oscillator' ? '92%' : 220"
+                                :options="oscillatorChartOptions" :series="oscillatorChartSeries"></apexchart>
+                        </div>
+                        <div class="indicator-desc mt-2" v-if="fullScreenChart !== 'oscillator'">
+                            <strong>解讀：</strong>
+                            <p class="text-xs mt-1">RSI >70 超買，<30 超賣。KD值低檔交叉(<30)為強烈買訊。</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="flex flex-col items-center justify-center py-32 text-slate-500 animate-fade-in">
+            <div
+                class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 text-5xl shadow-inner border border-slate-700">
+                🔍
+            </div>
+            <h2 class="text-2xl font-light text-slate-300">準備開始您的量化分析</h2>
+            <p class="text-sm mt-3 text-slate-600 max-w-md text-center">
+                請在上方輸入股票代號或加密貨幣交易對，系統將自動載入即時數據並生成 AI 評級報告。
+            </p>
+            <div class="mt-8 flex gap-4 text-xs text-slate-600">
+                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-blue-500 rounded-full"></span> FinMind
+                    Data</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 bg-yellow-500 rounded-full"></span> Binance
+                    API</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        const { createApp, ref, computed, reactive, watch, onMounted, onBeforeUnmount } = Vue;
+
+        const app = createApp({
+            setup() {
+                // --- State Management ---
+                const dataSource = ref('TWSTOCK');
+                const cryptoSymbol = ref('BTCUSDT');
+                const twStockSymbol = ref('2330');
+                const finMindToken = ref('');
+                const interval = ref('1d'); // 1d, 1w, 1mo
+                const loading = ref(false);
+                const errorMsg = ref('');
+                const chartKey = ref(0);
+                const stockName = ref('');
+                const stockIndustry = ref('');
+                const fullScreenChart = ref(null);
+                const showHelpModal = ref(false);
+
+                // Data Containers
+                const rawData = ref([]);
+                const indicatorsReady = ref(false);
+
+                // AI Model Weights
+                const weights = reactive({ ma: 30, macd: 20, rsi: 20, bb: 15, kd: 15 });
+                const resetWeights = () => { weights.ma = 30; weights.macd = 20; weights.rsi = 20; weights.bb = 15; weights.kd = 15; };
+                const totalWeight = computed(() => weights.ma + weights.macd + weights.rsi + weights.bb + weights.kd);
+
+                // Indicators Container
+                const indicators = reactive({ ma20: [], bbUpper: [], bbLower: [], rsi: [], k: [], d: [], macd: [], signal: [], hist: [] });
+
+                // --- Core Logic: Resampling ---
+                const resampleData = (dailyData, period) => {
+                    if (period === '1d') return dailyData;
+
+                    const getGroupKey = (date, period) => {
+                        const d = new Date(date);
+                        const year = d.getFullYear();
+                        if (period === '1w') {
+                            const day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
+                            const monday = new Date(d.setDate(diff));
+                            return `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
+                        }
+                        if (period === '1mo') return `${year}-${d.getMonth() + 1}`;
+                        return date;
+                    };
+
+                    const groups = {};
+                    dailyData.forEach(candle => {
+                        const key = getGroupKey(candle.time, period);
+                        if (!groups[key]) groups[key] = [];
+                        groups[key].push(candle);
+                    });
+
+                    const resampled = [];
+                    for (const key in groups) {
+                        const group = groups[key];
+                        if (group.length === 0) continue;
+                        const open = group[0].open;
+                        const close = group[group.length - 1].close;
+                        const high = Math.max(...group.map(c => c.high));
+                        const low = Math.min(...group.map(c => c.low));
+                        const volume = group.reduce((sum, c) => sum + c.volume, 0);
+                        const time = group[group.length - 1].time;
+
+                        resampled.push({ time, open, high, low, close, volume });
+                    }
+                    return resampled.sort((a, b) => a.time - b.time);
+                };
+
+                // --- Core Logic: Data Fetching ---
+                const fetchData = async () => {
+                    loading.value = true;
+                    errorMsg.value = '';
+                    rawData.value = [];
+                    indicatorsReady.value = false;
+                    stockName.value = '';
+                    stockIndustry.value = '';
+
+                    try {
+                        let candles = [];
+
+                        if (dataSource.value === 'TWSTOCK') {
+                            const stockId = twStockSymbol.value.trim();
+                            if (!stockId) throw new Error("請輸入股票代號");
+
+                            const today = new Date();
+                            let daysToFetch = 365;
+                            if (interval.value === '1w') daysToFetch = 365 * 3;
+                            if (interval.value === '1mo') daysToFetch = 365 * 5;
+
+                            const startDate = new Date(today.setDate(today.getDate() - daysToFetch)).toISOString().split('T')[0];
+
+                            // Fetch Info (Async)
+                            let infoUrl = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo&data_id=${stockId}`;
+                            if (finMindToken.value) infoUrl += `&token=${finMindToken.value}`;
+
+                            fetch(infoUrl).then(res => res.json()).then(json => {
+                                if (json.data && json.data.length > 0) {
+                                    stockName.value = json.data[0].stock_name;
+                                    stockIndustry.value = json.data[0].industry_category;
+                                }
+                            }).catch(err => console.warn('Info fetch failed', err));
+
+                            // Fetch Price
+                            let url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${stockId}&start_date=${startDate}`;
+                            if (finMindToken.value) url += `&token=${finMindToken.value}`;
+
+                            const res = await fetch(url);
+                            const json = await res.json();
+
+                            if (json.msg !== "success") throw new Error(json.msg || "FinMind API 錯誤");
+                            if (!json.data || json.data.length === 0) throw new Error("找不到此股票數據，請確認代號或日期");
+
+                            const dailyData = json.data.map(d => ({
+                                time: new Date(d.date).getTime(),
+                                open: d.open, high: d.max, low: d.min, close: d.close, volume: d.Trading_Volume
+                            })).sort((a, b) => a.time - b.time);
+
+                            candles = resampleData(dailyData, interval.value);
+
+                        } else if (dataSource.value === 'CRYPTO') {
+                            const symbol = cryptoSymbol.value.toUpperCase();
+                            stockName.value = symbol;
+                            stockIndustry.value = 'Crypto';
+
+                            let binanceInterval = interval.value;
+                            if (interval.value === '1w') binanceInterval = '1w';
+                            if (interval.value === '1mo') binanceInterval = '1M';
+
+                            const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=200`;
+                            const res = await fetch(url);
+                            if (!res.ok) throw new Error('無法獲取幣安數據 (請確認交易對)');
+                            const data = await res.json();
+
+                            candles = data.map(d => ({
+                                time: d[0], open: parseFloat(d[1]), high: parseFloat(d[2]),
+                                low: parseFloat(d[3]), close: parseFloat(d[4]), volume: parseFloat(d[5])
+                            }));
+                        }
+
+                        if (candles.length < 20) throw new Error("數據不足，無法進行技術分析 (K棒數量過少)");
+
+                        rawData.value = candles;
+                        calculateIndicators(candles);
+                        indicatorsReady.value = true;
+                        chartKey.value++;
+
+                    } catch (e) {
+                        errorMsg.value = e.message;
+                        console.error(e);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // --- Core Logic: Indicators ---
+                const calculateIndicators = (data) => {
+                    const closes = data.map(d => d.close);
+                    const highs = data.map(d => d.high);
+                    const lows = data.map(d => d.low);
+
+                    indicators.ma20 = calculateSMA(closes, 20);
+                    const bb = calculateBB(closes, 20, 2);
+                    indicators.bbUpper = bb.upper; indicators.bbLower = bb.lower;
+                    indicators.rsi = calculateRSI(closes, 14);
+                    const macdData = calculateMACD(closes, 12, 26, 9);
+                    indicators.macd = macdData.macd; indicators.signal = macdData.signal; indicators.hist = macdData.hist;
+                    const kd = calculateKD(closes, highs, lows, 9);
+                    indicators.k = kd.k; indicators.d = kd.d;
+                };
+
+                // Standard Algorithms (MA, BB, RSI, MACD, KD)
+                const calculateSMA = (data, window) => {
+                    let result = [];
+                    for (let i = 0; i < data.length; i++) {
+                        if (i < window - 1) { result.push(null); continue; }
+                        let sum = 0;
+                        for (let j = 0; j < window; j++) sum += data[i - j];
+                        result.push(sum / window);
+                    }
+                    return result;
+                };
+                const calculateBB = (data, window, mult) => {
+                    let upper = [], lower = [], middle = [];
+                    for (let i = 0; i < data.length; i++) {
+                        if (i < window - 1) { upper.push(null); lower.push(null); middle.push(null); continue; }
+                        let slice = data.slice(i - window + 1, i + 1);
+                        let mean = slice.reduce((a, b) => a + b, 0) / window;
+                        let variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / window;
+                        let std = Math.sqrt(variance);
+                        middle.push(mean);
+                        upper.push(mean + mult * std); lower.push(mean - mult * std);
+                    }
+                    return { upper, lower, middle };
+                };
+                const calculateRSI = (data, period) => {
+                    let rsi = [];
+                    let gains = 0, losses = 0;
+                    for (let i = 1; i <= period; i++) {
+                        let change = data[i] - data[i - 1];
+                        if (change > 0) gains += change; else losses -= change;
+                    }
+                    let avgGain = gains / period; let avgLoss = losses / period;
+                    for (let i = 0; i < data.length; i++) {
+                        if (i < period) { rsi.push(null); continue; }
+                        if (i > period) {
+                            let change = data[i] - data[i - 1];
+                            let gain = change > 0 ? change : 0; let loss = change < 0 ? -change : 0;
+                            avgGain = ((avgGain * (period - 1)) + gain) / period;
+                            avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+                        }
+                        let rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+                        rsi.push(100 - (100 / (1 + rs)));
+                    }
+                    return rsi;
+                };
+                const calculateMACD = (data, fast, slow, signal) => {
+                    const ema = (arr, n) => {
+                        let k = 2 / (n + 1); let result = [arr[0]];
+                        for (let i = 1; i < arr.length; i++) { result.push(arr[i] * k + result[i - 1] * (1 - k)); }
+                        return result;
+                    };
+                    const emaFast = ema(data, fast); const emaSlow = ema(data, slow);
+                    const macdLine = emaFast.map((v, i) => v - emaSlow[i]);
+                    const signalLine = ema(macdLine, signal);
+                    const hist = macdLine.map((v, i) => v - signalLine[i]);
+                    return { macd: macdLine, signal: signalLine, hist: hist };
+                };
+                const calculateKD = (close, high, low, period) => {
+                    let k = [50], d = [50];
+                    for (let i = 1; i < close.length; i++) {
+                        if (i < period) { k.push(50); d.push(50); continue; }
+                        let sliceLow = low.slice(i - period + 1, i + 1); let sliceHigh = high.slice(i - period + 1, i + 1);
+                        let min = Math.min(...sliceLow); let max = Math.max(...sliceHigh);
+                        let rsv = 0;
+                        if (max !== min) rsv = (close[i] - min) / (max - min) * 100;
+                        let currK = (2 / 3) * k[i - 1] + (1 / 3) * rsv;
+                        let currD = (2 / 3) * d[i - 1] + (1 / 3) * currK;
+                        k.push(currK); d.push(currD);
+                    }
+                    return { k, d };
+                };
+
+                // --- Core Logic: AI Scoring (Enhanced) ---
+                const analysisReport = computed(() => {
+                    if (rawData.value.length === 0) return { score: 0, signals: [], details: [], matrix: {} };
+                    const idx = rawData.value.length - 1; const prev = idx - 1; const close = rawData.value[idx].close;
+                    const signals = [];
+
+                    const totalW = weights.ma + weights.macd + weights.rsi + weights.bb + weights.kd;
+                    if (totalW === 0) return { score: 0, signals: [], details: [], matrix: {} };
+
+                    // Normalized weights
+                    const wMA = weights.ma / totalW;
+                    const wMACD = weights.macd / totalW;
+                    const wRSI = weights.rsi / totalW;
+                    const wBB = weights.bb / totalW;
+                    const wKD = weights.kd / totalW;
+                    const scale = 3; // Max score potential
+
+                    let score = 0;
+                    const details = [];
+
+                    // MA Logic
+                    const ma20 = indicators.ma20[idx];
+                    let maRaw = 0;
+                    if (ma20 && close > ma20) {
+                        signals.push({ title: '多頭趨勢 (MA20)', desc: '股價位於均線之上', icon: '📈' });
+                        maRaw = 1;
+                    } else if (ma20) {
+                        signals.push({ title: '空頭壓力 (MA20)', desc: '股價受制於均線', icon: '📉' });
+                        maRaw = -1;
+                    }
+                    const maContr = maRaw * wMA * scale;
+                    score += maContr;
+                    details.push({ name: 'MA 趨勢', raw: maRaw, weight: weights.ma, val: maContr });
+
+                    // RSI Logic
+                    const rsi = indicators.rsi[idx];
+                    let rsiRaw = 0;
+                    if (rsi > 70) {
+                        signals.push({ title: 'RSI 過熱', desc: '>70 警戒', icon: '⚠️' });
+                        rsiRaw = -1; // Risky
+                    } else if (rsi < 30) {
+                        signals.push({ title: 'RSI 超賣', desc: '<30 機會', icon: '💎' });
+                        rsiRaw = 1; // Opportunity
+                    }
+                    const rsiContr = rsiRaw * wRSI * scale;
+                    score += rsiContr;
+                    details.push({ name: 'RSI 強弱', raw: rsiRaw, weight: weights.rsi, val: rsiContr });
+
+                    // BB Logic
+                    const up = indicators.bbUpper[idx]; const low = indicators.bbLower[idx];
+                    let bbRaw = 0;
+                    if (up && close > up) {
+                        signals.push({ title: '布林突破', desc: '強勢噴出', icon: '🚀' });
+                        bbRaw = 1;
+                    } else if (low && close < low) {
+                        signals.push({ title: '布林支撐', desc: '觸底反彈', icon: '🛡️' });
+                        bbRaw = 0.5; // Weak buy
+                    }
+                    const bbContr = bbRaw * wBB * scale;
+                    score += bbContr;
+                    details.push({ name: 'BB 通道', raw: bbRaw, weight: weights.bb, val: bbContr });
+
+                    // KD Logic
+                    const k = indicators.k[idx]; const d = indicators.d[idx];
+                    const prevK = indicators.k[prev]; const prevD = indicators.d[prev];
+                    let kdRaw = 0;
+                    if (k > d && prevK <= prevD && k < 30) {
+                        signals.push({ title: 'KD 金叉', desc: '低檔買訊', icon: '✨' });
+                        kdRaw = 1.5; // Strong buy
+                    }
+                    const kdContr = kdRaw * wKD * scale;
+                    score += kdContr;
+                    details.push({ name: 'KD 隨機', raw: kdRaw, weight: weights.kd, val: kdContr });
+
+                    // MACD Logic
+                    const hist = indicators.hist[idx]; const prevHist = indicators.hist[prev];
+                    let macdRaw = 0;
+                    if (hist > 0 && hist > prevHist) macdRaw = 1;
+                    else if (hist < 0 && hist < prevHist) macdRaw = -1;
+                    const macdContr = macdRaw * wMACD * scale;
+                    score += macdContr;
+                    details.push({ name: 'MACD 動能', raw: macdRaw, weight: weights.macd, val: macdContr });
+
+                    // Determine Matrix Status
+                    let matrix = {};
+                    if (score > 2.0) matrix = { mood: '🔥 極度樂觀 (超買)', action: '趨勢極強/提防乖離', color: 'text-red-400' };
+                    else if (score >= 0.5) matrix = { mood: '📈 多頭主導', action: '順勢建立部位', color: 'text-red-400' };
+                    else if (score >= -0.5) matrix = { mood: '⚖️ 盤整 / 觀望', action: '多空抵銷/空手觀望', color: 'text-slate-300' };
+                    else if (score >= -2.0) matrix = { mood: '📉 空頭主導', action: '減碼/避險/放空', color: 'text-green-400' };
+                    else matrix = { mood: '❄️ 極度恐慌 (超賣)', action: '搶短反彈/等待止跌', color: 'text-green-400' };
+
+                    return { score, signals, details, matrix };
+                });
+
+                // --- View Helpers ---
+                const currentPrice = computed(() => rawData.value.length ? rawData.value[rawData.value.length - 1].close : 0);
+                const currentVolume = computed(() => rawData.value.length ? rawData.value[rawData.value.length - 1].volume : 0);
+                const currentDate = computed(() => {
+                    if (!rawData.value.length) return '';
+                    const timestamp = rawData.value[rawData.value.length - 1].time;
+                    return new Date(timestamp).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                });
+                const currentRSI = computed(() => indicators.rsi.length ? indicators.rsi[indicators.rsi.length - 1]?.toFixed(0) : 0);
+                const priceChange = computed(() => {
+                    if (rawData.value.length < 2) return 0;
+                    const curr = rawData.value[rawData.value.length - 1].close;
+                    const prev = rawData.value[rawData.value.length - 2].close;
+                    return (((curr - prev) / prev) * 100).toFixed(2);
+                });
+
+                const commonOptions = {
+                    chart: { type: 'line', toolbar: { show: false }, background: 'transparent', animations: { enabled: false } },
+                    theme: { mode: 'dark' },
+                    xaxis: { type: 'datetime', tooltip: { enabled: false }, axisBorder: { show: false }, axisTicks: { show: false } },
+                    grid: { borderColor: '#334155', strokeDashArray: 3, xaxis: { lines: { show: false } } },
+                    dataLabels: { enabled: false }
+                };
+
+                const mainChartSeries = computed(() => [
+                    { name: 'K線', type: 'candlestick', data: rawData.value.map(d => ({ x: d.time, y: [d.open, d.high, d.low, d.close] })) },
+                    { name: 'MA20', type: 'line', data: indicators.ma20.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) },
+                    { name: 'BB Upper', type: 'line', data: indicators.bbUpper.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) },
+                    { name: 'BB Lower', type: 'line', data: indicators.bbLower.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) }
+                ]);
+
+                const mainChartOptions = computed(() => ({
+                    ...commonOptions,
+                    xaxis: {
+                        type: 'datetime',
+                        tooltip: { enabled: true },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    plotOptions: { candlestick: { colors: { upward: '#ef4444', downward: '#22c55e' }, wick: { useFillColor: true } } },
+                    stroke: { width: [1, 1, 1, 1], dashArray: [0, 0, 5, 5], colors: ['#ffffff', '#3b82f6', '#94a3b8', '#94a3b8'] },
+                    yaxis: { tooltip: { enabled: true }, decimalsInFloat: 2 }
+                }));
+
+                const macdChartSeries = computed(() => [
+                    { name: 'MACD', type: 'line', data: indicators.macd.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) },
+                    { name: 'Signal', type: 'line', data: indicators.signal.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) },
+                    { name: 'Hist', type: 'bar', data: indicators.hist.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) }
+                ]);
+
+                const macdChartOptions = computed(() => ({
+                    ...commonOptions,
+                    colors: ['#8b5cf6', '#f97316', '#6b7280'], stroke: { width: [2, 2, 0] }, yaxis: { show: false },
+                    tooltip: { y: { formatter: (val) => val ? val.toFixed(2) : val } },
+                    plotOptions: { bar: { colors: { ranges: [{ from: 0, to: 10000, color: '#ef4444' }, { from: -10000, to: 0, color: '#22c55e' }] } } }
+                }));
+
+                const oscillatorChartSeries = computed(() => [
+                    { name: 'RSI', data: indicators.rsi.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) },
+                    { name: 'K', data: indicators.k.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) },
+                    { name: 'D', data: indicators.d.map((v, i) => ({ x: rawData.value[i]?.time, y: v })) }
+                ]);
+
+                const oscillatorChartOptions = computed(() => ({
+                    ...commonOptions,
+                    colors: ['#d946ef', '#3b82f6', '#f59e0b'],
+                    stroke: { width: 1.5 },
+                    yaxis: { max: 100, min: 0, tickAmount: 4, decimalsInFloat: 0 },
+                    tooltip: {
+                        y: {
+                            formatter: (val) => val ? val.toFixed(0) : val
+                        }
+                    },
+                    annotations: { yaxis: [{ y: 70, borderColor: '#ef4444', strokeDashArray: 2, opacity: 0.5 }, { y: 30, borderColor: '#22c55e', strokeDashArray: 2, opacity: 0.5 }] }
+                }));
+
+                const toggleFullScreen = (chartId) => {
+                    fullScreenChart.value = fullScreenChart.value === chartId ? null : chartId;
+                };
+
+                const formatVolume = (v) => v >= 100000000 ? (v / 100000000).toFixed(2) + '億' : v >= 10000 ? (v / 10000).toFixed(2) + '萬' : v;
+                const getScoreColor = (s) => s >= 2 ? 'text-red-500' : s > 0 ? 'text-orange-400' : s < 0 ? 'text-green-500' : 'text-slate-400';
+                const getScoreText = (s) => s >= 2 ? '強力買進 (Strong Buy)' : s >= 1 ? '偏多操作 (Bullish)' : s <= -2 ? '賣出/避險 (Strong Sell)' : s <= -1 ? '偏空操作 (Bearish)' : '中立觀望 (Neutral)';
+                const getRSIColor = (v) => v > 70 ? 'text-red-400' : v < 30 ? 'text-green-400' : 'text-slate-200';
+                const getIntervalText = (i) => i === '1d' ? '日線' : i === '1w' ? '周線' : i === '1mo' ? '月線' : '季線';
+                const getMAContext = (i) => {
+                    switch (i) {
+                        case '1d': return '短期趨勢生命線 (月線)。股價在線上視為短多。';
+                        case '1w': return '中期趨勢指標 (20週線)。股價在線上視為中長線偏多。';
+                        case '1mo': return '長期趨勢指標 (20月線)。股價在線上視為長線多頭。';
+                        default: return '趨勢指標。';
+                    }
+                };
+
+                return {
+                    dataSource, cryptoSymbol, twStockSymbol, finMindToken, interval, loading, errorMsg,
+                    currentPrice, currentVolume, currentRSI, priceChange, currentDate,
+                    analysisReport, mainChartSeries, mainChartOptions,
+                    macdChartSeries, macdChartOptions, oscillatorChartSeries, oscillatorChartOptions,
+                    fetchData, formatVolume, getScoreColor, getScoreText, getRSIColor, rawData,
+                    weights, resetWeights, totalWeight, chartKey, indicatorsReady, getIntervalText, getMAContext,
+                    stockName, stockIndustry, fullScreenChart, toggleFullScreen, showHelpModal
+                };
+            }
+        });
+
+        // Manual ApexCharts Wrapper
+        app.component('apexchart', {
+            props: {
+                type: { type: String, default: 'line' },
+                height: { type: [String, Number], default: 'auto' },
+                options: { type: Object, default: () => ({}) },
+                series: { type: Array, default: () => [] }
+            },
+            template: '<div ref="el"></div>',
+            setup(props) {
+                const { ref, onMounted, onBeforeUnmount, watch } = Vue;
+                const el = ref(null);
+                let chart = null;
+
+                const initChart = () => {
+                    if (!el.value || !window.ApexCharts) return;
+                    if (chart) chart.destroy();
+                    const config = {
+                        ...props.options,
+                        series: props.series,
+                        chart: {
+                            ...(props.options.chart || {}),
+                            type: props.type,
+                            height: props.height,
+                            background: 'transparent'
+                        }
+                    };
+                    chart = new ApexCharts(el.value, config);
+                    chart.render();
+                };
+
+                onMounted(initChart);
+
+                watch(() => props.options, () => { if (chart) chart.updateOptions(props.options); }, { deep: true });
+                watch(() => props.series, () => { if (chart) chart.updateSeries(props.series); }, { deep: true });
+                watch(() => props.height, () => { if (chart) chart.updateOptions({ chart: { height: props.height } }); });
+
+                onBeforeUnmount(() => { if (chart) chart.destroy(); });
+
+                return { el };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+
+</body>
+
+</html>

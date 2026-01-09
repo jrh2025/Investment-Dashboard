@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 量化交易決策系統 | Stock Analyzer Pro Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Noto Sans TC', 'Segoe UI', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px -5px rgba(59, 130, 246, 0.15);
+            border-color: #3b82f6;
+        }
+
+        .bg-grid-pattern {
+            background-image: linear-gradient(to right, #1e293b 1px, transparent 1px),
+                linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .delay-100 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-200 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-300 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-400 {
+            animation-delay: 0.4s;
+        }
+
+        .delay-500 {
+            animation-delay: 0.5s;
+        }
+
+        .delay-600 {
+            animation-delay: 0.6s;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col relative">
+
+    <!-- Background Grid -->
+    <div class="absolute inset-0 z-0 bg-grid-pattern opacity-20 pointer-events-none"></div>
+
+    <!-- Background Glows -->
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[128px] pointer-events-none"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[128px] pointer-events-none">
+    </div>
+    <!-- New Glow for Volume Section -->
+    <div
+        class="absolute bottom-[-20%] left-1/2 w-96 h-96 bg-emerald-600/10 rounded-full blur-[128px] pointer-events-none">
+    </div>
+
+    <!-- Main Content -->
+    <main
+        class="flex-grow container mx-auto px-6 py-12 md:py-20 relative z-10 flex flex-col justify-center items-center">
+
+        <!-- Header -->
+        <div class="text-center mb-16 max-w-4xl animate-fade-up">
+            <div
+                class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-blue-400 text-xs font-mono tracking-wider">
+                <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                AI Quant System v2.3
+            </div>
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
+                AI 量化交易<br class="md:hidden">決策系統
+            </h1>
+            <p class="text-xl text-slate-400 font-light leading-relaxed mb-8">
+                整合「<span class="text-slate-200 font-medium">價格動能 (Price Action)</span>」與「<span
+                    class="text-slate-200 font-medium">籌碼結構 (Volume Profile)</span>」雙核心引擎。<br>
+                從多因子特徵工程到動態策略回測，為您構建機構級的市場洞察力。
+            </p>
+        </div>
+
+        <!-- Navigation Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+
+            <!-- === Row 1: AI Stock Analyzer Suite (明確標註) === -->
+
+            <!-- Card 1: Guide (Left) -->
+            <a href="AI_Stock_Analyzer_Guide.html" target="_blank" rel="noopener noreferrer"
+                class="group relative animate-fade-up delay-100 block" onclick="handleLink(event, 'AI 儀表板指南')">
+                <div
+                    class="h-full glass-panel rounded-2xl p-8 card-hover flex flex-col border-t-4 border-t-slate-600 hover:border-t-blue-400">
+                    <div class="flex justify-between items-start mb-6">
+                        <div
+                            class="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                            📘
+                        </div>
+                        <span
+                            class="text-[10px] font-bold bg-blue-900/50 text-blue-300 px-2 py-1 rounded border border-blue-800/50">儀表板專用文件</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-3 group-hover:text-blue-400 transition-colors">AI
+                        儀表板使用指南</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
+                        專為<strong>「AI 智能投資儀表板」</strong>編寫的操作手冊。詳解系統架構、六大核心模組應用，以及常見問題 (FAQ)。
+                    </p>
+                    <div
+                        class="flex items-center text-blue-400 text-sm font-bold mt-auto group-hover:translate-x-2 transition-transform">
+                        閱讀操作指南 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 2: Dashboard (Center - Featured) -->
+            <a href="AI_Stock_Analyzer_Dashboard.html" target="_blank" rel="noopener noreferrer"
+                class="group relative animate-fade-up delay-200 transform md:-translate-y-4 block"
+                onclick="handleLink(event, 'AI 智能儀表板')">
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity duration-500">
+                </div>
+                <div
+                    class="h-full bg-slate-800 rounded-2xl p-8 card-hover flex flex-col border border-slate-700 relative z-10 shadow-2xl">
+                    <div class="absolute top-0 right-0 p-4">
+                        <span
+                            class="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Core
+                            App</span>
+                    </div>
+                    <div
+                        class="mb-6 w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl shadow-lg group-hover:rotate-6 transition-transform duration-300">
+                        ⚡
+                    </div>
+                    <h2
+                        class="text-3xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:to-purple-400 transition-all">
+                        AI 智能投資儀表板</h2>
+                    <p class="text-slate-300 text-base leading-relaxed mb-8 flex-grow">
+                        本系統的核心價格分析終端。整合即時 K 線、技術指標 (MACD, RSI) 與 <strong>AI 加權評分模型</strong>，提供一站式決策輔助。
+                    </p>
+                    <button
+                        class="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg shadow-lg shadow-blue-900/50 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        啟動價格分析
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </a>
+
+            <!-- Card 3: Rating/Whitepaper (Right) -->
+            <a href="AI_Stock_Analyzer_Rating.html" target="_blank" rel="noopener noreferrer"
+                class="group relative animate-fade-up delay-300 block" onclick="handleLink(event, '演算法白皮書')">
+                <div
+                    class="h-full glass-panel rounded-2xl p-8 card-hover flex flex-col border-t-4 border-t-slate-600 hover:border-t-purple-400">
+                    <div class="flex justify-between items-start mb-6">
+                        <div
+                            class="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                            📐
+                        </div>
+                        <span
+                            class="text-[10px] font-bold bg-purple-900/50 text-purple-300 px-2 py-1 rounded border border-purple-800/50">儀表板專用文件</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">AI
+                        評分模型白皮書</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
+                        揭露<strong>「AI 智能投資儀表板」</strong>的底層邏輯。深度解析加權評分演算法，以及各項技術指標的數學定義與判斷標準。
+                    </p>
+                    <div
+                        class="flex items-center text-purple-400 text-sm font-bold mt-auto group-hover:translate-x-2 transition-transform">
+                        查看公式詳解 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+            <!-- === Row 2: Volume & Momentum Suite === -->
+
+            <!-- Card 4: Volume Guide (Left) -->
+            <a href="Volume_Price_analysis_Guide.html" target="_blank" rel="noopener noreferrer"
+                class="group relative animate-fade-up delay-400 block" onclick="handleLink(event, '量價系統指南')">
+                <div
+                    class="h-full glass-panel rounded-2xl p-8 card-hover flex flex-col border-t-4 border-t-slate-600 hover:border-t-emerald-400">
+                    <div
+                        class="mb-6 w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                        📊
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-3 group-hover:text-emerald-400 transition-colors">
+                        量價系統使用指南</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
+                        專注於<strong>籌碼與動能分析</strong>。深度解析「價漲量增」、「背離」、「恐慌殺盤」等關鍵市場訊號的判讀技巧。
+                    </p>
+                    <div
+                        class="flex items-center text-emerald-400 text-sm font-bold mt-auto group-hover:translate-x-2 transition-transform">
+                        學習量價判讀 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 5: Volume System (Center - Featured Style) -->
+            <a href="Volume_Price_analysis_system.html" target="_blank" rel="noopener noreferrer"
+                class="group relative animate-fade-up delay-500 block" onclick="handleLink(event, '量價動能系統')">
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity duration-500">
+                </div>
+                <div
+                    class="h-full bg-slate-800 rounded-2xl p-8 card-hover flex flex-col border border-slate-700 relative z-10 shadow-2xl">
+                    <div class="absolute top-0 right-0 p-4">
+                        <span
+                            class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Volume
+                            App</span>
+                    </div>
+                    <div
+                        class="mb-6 w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-4xl shadow-lg group-hover:rotate-6 transition-transform duration-300">
+                        🌊
+                    </div>
+                    <h2
+                        class="text-3xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-emerald-400 group-hover:to-teal-400 transition-all">
+                        量價動能分析系統</h2>
+                    <p class="text-slate-300 text-base leading-relaxed mb-8 flex-grow">
+                        進階籌碼分析終端。即時運算多週期均量與乖離率，透過可視化圖表精準捕捉主力動向與市場情緒轉折。
+                    </p>
+                    <button
+                        class="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg shadow-lg shadow-emerald-900/50 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        啟動量價分析
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </a>
+
+            <!-- Card 6: Download Source (Right - Utility Style) -->
+            <a href="Investment-Dashboard.zip" download class="group relative animate-fade-up delay-600 block">
+                <div
+                    class="h-full glass-panel rounded-2xl p-8 card-hover flex flex-col border-t-4 border-t-slate-600 hover:border-t-amber-400">
+                    <div
+                        class="mb-6 w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                        📦
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-3 group-hover:text-amber-400 transition-colors">下載完整原始碼
+                    </h2>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
+                        將本專案 (v2.3) 打包帶走。包含所有 HTML/JS 檔案與技術文件，解壓縮後即可在本地端離線執行，完全開源。
+                    </p>
+                    <div
+                        class="flex items-center text-amber-400 text-sm font-bold mt-auto group-hover:translate-x-2 transition-transform">
+                        點擊下載 ZIP <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Tech Stack Badges -->
+        <div
+            class="mt-20 flex flex-wrap justify-center gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-500 animate-fade-up delay-300">
+            <span class="px-4 py-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono text-slate-300">Python
+                Logic</span>
+            <span class="px-4 py-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono text-slate-300">Vue.js
+                3.0</span>
+            <span
+                class="px-4 py-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono text-slate-300">React.js</span>
+            <span
+                class="px-4 py-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono text-slate-300">Tailwind
+                CSS</span>
+            <span
+                class="px-4 py-2 bg-slate-800 rounded border border-slate-700 text-xs font-mono text-slate-300">ApexCharts</span>
+        </div>
+
+    </main>
+
+    <footer class="py-6 border-t border-slate-800 text-center text-slate-500 text-sm bg-slate-900/50 backdrop-blur">
+        <p>&copy; 2026 AI Stock Analyzer Pro Suite. jrh2005@gmail.com All rights reserved.</p>
+    </footer>
+
+    <!-- Preview Environment Notice -->
+    <div id="preview-notice"
+        class="fixed bottom-4 right-4 bg-slate-800 border border-slate-600 p-4 rounded-xl shadow-2xl max-w-xs z-50 transform transition-all duration-300 translate-y-full opacity-0">
+        <div class="flex items-start gap-3">
+            <span class="text-yellow-400 text-xl">⚠️</span>
+            <div>
+                <h4 class="font-bold text-white text-sm mb-1">預覽模式限制</h4>
+                <p class="text-slate-400 text-xs">您正在預覽首頁。點擊連結無法跳轉，因為目標檔案僅存在於您的本地資料夾中。</p>
+            </div>
+            <button onclick="closeNotice()" class="text-slate-500 hover:text-white">&times;</button>
+        </div>
+    </div>
+
+    <script>
+        // Check if we are in a preview iframe (simplified check)
+        const isPreview = window.self !== window.top || window.location.hostname.includes('googleusercontent');
+
+        if (isPreview) {
+            setTimeout(() => {
+                const notice = document.getElementById('preview-notice');
+                notice.classList.remove('translate-y-full', 'opacity-0');
+            }, 1000);
+        }
+
+        function closeNotice() {
+            const notice = document.getElementById('preview-notice');
+            notice.classList.add('translate-y-full', 'opacity-0');
+        }
+
+        function handleLink(e, name) {
+            // Only interfere if in preview mode (heuristic)
+            if (isPreview) {
+                // If the link is relative and likely missing in preview
+                e.preventDefault();
+                const notice = document.getElementById('preview-notice');
+                notice.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <span class="text-green-400 text-xl">✅</span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm mb-1">連結正常</h4>
+                            <p class="text-slate-400 text-xs">在本地端執行時，這會開啟 <strong>${name}</strong> 頁面。</p>
+                        </div>
+                         <button onclick="closeNotice()" class="text-slate-500 hover:text-white">&times;</button>
+                    </div>
+                `;
+                notice.classList.remove('translate-y-full', 'opacity-0');
+
+                // Auto hide after 3s
+                setTimeout(() => closeNotice(), 3000);
+            }
+        }
+    </script>
+
+</body>
+
+</html>
